@@ -16,22 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef READ_CARD_H
-#define READ_CARD_H
-
-#include <nds/ndstypes.h>
 #include <nds/memory.h>
-#include <stdlib.h>
+#include <nds/ndstypes.h>
 
-#define CARD_NDS_HEADER_SIZE (0x200)
-#define CARD_SECURE_AREA_OFFSET (0x4000)
-#define CARD_SECURE_AREA_SIZE (0x4000)
-#define CARD_DATA_OFFSET (0x8000)
-#define CARD_DATA_BLOCK_SIZE (0x200)
-
-int cardInit (tNDSHeader* ndsHeader, u32* chipID);
-
-void cardRead (u32 src, u32* dest, size_t size);
-
-#endif // READ_CARD_H
+/*-------------------------------------------------------------------------
+arm7_hookGame
+Adds a hook in the game's ARM7 binary to our own code
+-------------------------------------------------------------------------*/
+int arm7_hookGame (const tNDSHeader* ndsHeader, const u32* cheatData, u32* cheatEngineLocation);
 

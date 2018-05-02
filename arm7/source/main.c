@@ -19,16 +19,10 @@
 #include <nds.h>
 #include <nds/arm7/input.h>
 #include <nds/system.h>
-
 #include <maxmod7.h>
 
-#include "launch_engine_arm7.h"
-
-#define REG_ROMCTRL		(*(vu32*)0x40001A4)
-#define REG_SCFG_ROM	(*(vu32*)0x4004000)
-#define REG_SCFG_CLK	(*(vu32*)0x4004004)
-#define REG_SCFG_EXT	(*(vu32*)0x4004008)
-#define REG_SCFG_MC		(*(vu32*)0x4004010)
+#include "cheat_engine_arm7.h"
+#include "resetslot.h"
 
 void VcountHandler() {
 	inputGetAndSend();
@@ -37,41 +31,10 @@ void VcountHandler() {
 void VblankHandler(void) {
 }
 
-void PowerOnSlot() {
-	// Power On Slot
-	while(REG_SCFG_MC&0x0C !=  0x0C); // wait until state<>3
-	if(REG_SCFG_MC&0x0C != 0x00) return; //  exit if state<>0
-	
-	REG_SCFG_MC = 0x04;    // wait 1ms, then set state=1
-	while(REG_SCFG_MC&0x0C != 0x04);
-	
-	REG_SCFG_MC = 0x08;    // wait 10ms, then set state=2      
-	while(REG_SCFG_MC&0x0C != 0x08);
-	
-	REG_ROMCTRL = 0x20000000; // wait 27ms, then set ROMCTRL=20000000h
-	
-	while(REG_ROMCTRL&0x8000000 != 0x8000000);
-	
-}
-
-void PowerOffSlot() {
-	while(REG_SCFG_MC&0x0C !=  0x0C); // wait until state<>3
-	if(REG_SCFG_MC&0x0C != 0x08) return 1; // exit if state<>2      
-	
-	REG_SCFG_MC = 0x0C; // set state=3 
-	while(REG_SCFG_MC&0x0C != 0x00); // wait until state=0
-}
-
-void TWL_ResetSlot1() {
-	PowerOffSlot();
-	for (int i = 0; i < 30; i++) { swiWaitForVBlank(); }
-	PowerOnSlot(); 
-}
-
+//---------------------------------------------------------------------------------
 int main(void) {
+//---------------------------------------------------------------------------------
 
-	REG_SCFG_CLK = 0x0187;
-	
 	irqInit();
 	fifoInit();
 
@@ -80,30 +43,33 @@ int main(void) {
 
 	// Start the RTC tracking IRQ
 	initClockIRQ();
-	
+
 	mmInstall(FIFO_MAXMOD);
 
 	SetYtrigger(80);
 
 	installSoundFIFO();
 	installSystemFIFO();
-	
+
 	irqSet(IRQ_VCOUNT, VcountHandler);
 	irqSet(IRQ_VBLANK, VblankHandler);
 
 	irqEnable( IRQ_VBLANK | IRQ_VCOUNT);
+
+	i2cWriteRegister(0x4A, 0x12, 0x00);		// Press power-button for auto-reset
+	i2cWriteRegister(0x4A, 0x70, 0x01);		// Bootflag = Warmboot/SkipHealthSafety
 	
 	// Make sure Arm9 had a chance to check slot status
 	fifoWaitValue32(FIFO_USER_01);
 	// If Arm9 reported slot is powered off, have Arm7 wait for Arm9 to be ready before card reset. This makes sure arm7 doesn't try card reset too early.
-	if(fifoCheckValue32(FIFO_USER_02)) { 
-		if(fifoCheckValue32(FIFO_USER_07)) { TWL_ResetSlot1(); } else { PowerOnSlot(); }
-	}
+	if(fifoCheckValue32(FIFO_USER_02)) { PowerOnSlot(); }
 	fifoSendValue32(FIFO_USER_03, 1);
-	
+
+	// Keep the ARM7 mostly idle
 	while (1) {
-		runLaunchEngineCheck();
+		runCheatEngineCheck();
 		swiWaitForVBlank();
 	}
 }
+
 

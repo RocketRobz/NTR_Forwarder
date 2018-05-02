@@ -19,7 +19,6 @@
 #include <string.h>
 #include "encryption.h"
 #include "read_bios.h"
-#include "key1.h"
 
 #define KEYSIZE 0x1048
 
@@ -98,7 +97,7 @@ void apply_keycode (u32 modulo) {
 }
 
 void init_keycode (u32 idcode, u32 level, u32 modulo) {
-	memcpy ((u8*)keybuf, gEncrData, KEYSIZE);
+	readBios ((u8*)keybuf, 0x30, KEYSIZE);
 	keycode[0] = idcode;
 	keycode[1] = idcode/2;
 	keycode[2] = idcode*2;

@@ -16,22 +16,22 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef READ_CARD_H
-#define READ_CARD_H
+#ifndef CHEAT_ENGINE_H
+#define CHEAT_ENGINE_H
 
 #include <nds/ndstypes.h>
-#include <nds/memory.h>
-#include <stdlib.h>
+#define CHEAT_MAX_DATA_SIZE (64 * 1024)			// 64KiB
 
-#define CARD_NDS_HEADER_SIZE (0x200)
-#define CARD_SECURE_AREA_OFFSET (0x4000)
-#define CARD_SECURE_AREA_SIZE (0x4000)
-#define CARD_DATA_OFFSET (0x8000)
-#define CARD_DATA_BLOCK_SIZE (0x200)
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-int cardInit (tNDSHeader* ndsHeader, u32* chipID);
 
-void cardRead (u32 src, u32* dest, size_t size);
+void runCheatEngine (void* cheats, int cheatLength, bool BoostVRAM);
 
-#endif // READ_CARD_H
 
+#ifdef __cplusplus
+}
+#endif
+
+#endif // CHEAT_ENGINE_H

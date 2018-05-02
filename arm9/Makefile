@@ -24,17 +24,17 @@ MUSIC       :=  music
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-mthumb -mthumb-interwork
+ARCH	:=	-march=armv5te -mtune=arm946e-s -mthumb -mthumb-interwork
 
 CFLAGS	:=	-g -Wall -O2\
- 			-march=armv5te -mtune=arm946e-s -fomit-frame-pointer\
+			-fomit-frame-pointer\
 			-ffast-math \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -DARM9 -fno-strict-aliasing
+CFLAGS	+=	$(INCLUDE) -DARM9
 CXXFLAGS	:=	$(CFLAGS)
 
-ASFLAGS	:=	-g $(ARCH) -march=armv5te -mtune=arm946e-s
+ASFLAGS	:=	-g $(ARCH) $(INCLUDE)
 
 LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
@@ -56,8 +56,7 @@ LIBDIRS	:=	$(LIBNDS)
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
  
-export ARM9BIN	:=	$(TOPDIR)/$(TARGET).arm9
-export ARM9ELF	:=	$(CURDIR)/$(TARGET).arm9.elf
+export ARM9ELF	:=	$(CURDIR)/$(TARGET).elf
 export DEPSDIR := $(CURDIR)/$(BUILD)
 
 export AUDIOFILES	:=	$(foreach dir,$(notdir $(wildcard $(MUSIC)/*.*)),$(CURDIR)/$(MUSIC)/$(dir))
@@ -109,9 +108,9 @@ clean:
  
 #---------------------------------------------------------------------------------
 else
- 
-DEPENDS	:=	$(OFILES:.o=.d)
- 
+
+#DEPENDS	:=	$(OFILES:.o=.d)
+
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
@@ -127,31 +126,41 @@ $(ARM9ELF)	:	$(OFILES)
 #---------------------------------------------------------------------------------
 # graphics
 #---------------------------------------------------------------------------------
-#Cartridge Wait Prompt (bottom screen)
-CartPrompt01.s			:	../$(IMAGES)/CartPrompt01.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+bgtop.s			:	../$(IMAGES)/bgtop.bmp
+	grit	$< -gB4 -gzl -fts -o $@ -q
+	
+bgsub.s			:	../$(IMAGES)/bgsub.bmp
+	grit	$< -gB4 -gzl -fts -o $@ -q
 
-CartPrompt02.s			:	../$(IMAGES)/CartPrompt02.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+cursor.s		:	../$(IMAGES)/cursor.bmp
+	grit	$< -gB4 -fts -Mw8 -Mh4 -o $@ -q
 
-CartPrompt03.s			:	../$(IMAGES)/CartPrompt03.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+font.s			:	../$(IMAGES)/font.bmp
+	grit	$< -gB4 -gzl -fts -o font.s -q
 
-CartPrompt04.s			:	../$(IMAGES)/CartPrompt04.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+button_go.s		:	../$(IMAGES)/button_go.bmp
+	grit	$< -gB4 -fts -Mw16 -Mh4 -o $@ -q
 
-#DSi Cartridge Wait Prompt (bottom screen)
-DSiCartPrompt01.s			:	../$(IMAGES)/DSiCartPrompt01.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+button_go_boost.s		:	../$(IMAGES)/button_go_boost.bmp
+	grit	$< -gB4 -fts -Mw16 -Mh4 -o $@ -q
 
-DSiCartPrompt02.s			:	../$(IMAGES)/DSiCartPrompt02.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+button_on.s		:	../$(IMAGES)/button_on.bmp
+	grit	$< -gB4 -fts -Mw30 -Mh2 -o $@ -q
 
-DSiCartPrompt03.s			:	../$(IMAGES)/DSiCartPrompt03.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+button_off.s	:	../$(IMAGES)/button_off.bmp
+	grit	$< -gB4 -fts -Mw30 -Mh2 -o $@ -q
 
-DSiCartPrompt04.s			:	../$(IMAGES)/DSiCartPrompt04.bmp
-	grit	$< -gB8 -gzl -fts -gTff00ff -o $@ -q
+button_folder.s	:	../$(IMAGES)/button_folder.bmp
+	grit	$< -gB4 -fts -Mw30 -Mh2 -o $@ -q
+
+button_file.s	:	../$(IMAGES)/button_file.bmp
+	grit	$< -gB4 -fts -Mw30 -Mh2 -o $@ -q
+
+scrollbar.s		:	../$(IMAGES)/scrollbar.bmp
+	grit	$< -gB4 -Mw2 -Mh2 -fts -o scrollbar.s -q
+
+textbox.s		:	../$(IMAGES)/textbox.bmp
+	grit	$< -gB4 -fts -o textbox.s -q
 
 # generic fade from white to black
 
@@ -520,7 +529,7 @@ soundbank.bin : $(AUDIOFILES)
 	@echo $(notdir $<)
 	@$(bin2o)
 
--include $(DEPENDS)
+-include $(DEPSDIR)/*.d
  
 #---------------------------------------------------------------------------------------
 endif

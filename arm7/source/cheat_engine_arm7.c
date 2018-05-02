@@ -16,22 +16,18 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef READ_CARD_H
-#define READ_CARD_H
+#include <nds.h>
 
-#include <nds/ndstypes.h>
-#include <nds/memory.h>
-#include <stdlib.h>
+void runCheatEngineCheck (void)
+{
+	if(*((vu32*)0x027FFE24) == (u32)0x027FFE04)
+	{
+		REG_SCFG_ROM = 0x703;
+		if(fifoCheckValue32(FIFO_USER_04)) { REG_SCFG_CLK=0x0180; }
+		REG_SCFG_EXT = 0x12A00000;
 
-#define CARD_NDS_HEADER_SIZE (0x200)
-#define CARD_SECURE_AREA_OFFSET (0x4000)
-#define CARD_SECURE_AREA_SIZE (0x4000)
-#define CARD_DATA_OFFSET (0x8000)
-#define CARD_DATA_BLOCK_SIZE (0x200)
-
-int cardInit (tNDSHeader* ndsHeader, u32* chipID);
-
-void cardRead (u32 src, u32* dest, size_t size);
-
-#endif // READ_CARD_H
-
+		irqDisable (IRQ_ALL);
+		*((vu32*)0x027FFE34) = (u32)0x06000000;
+		swiSoftReset();
+	} 
+}

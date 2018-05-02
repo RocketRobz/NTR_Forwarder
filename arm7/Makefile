@@ -22,10 +22,10 @@ DATA		:=
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-mthumb-interwork
+ARCH	:=	-mthumb-interwork -march=armv4t -mtune=arm7tdmi
 
 CFLAGS	:=	-g -Wall -O2\
-		-mcpu=arm7tdmi -mtune=arm7tdmi -fomit-frame-pointer\
+		-fomit-frame-pointer\
 		-ffast-math \
 		$(ARCH)
 
@@ -33,8 +33,8 @@ CFLAGS	+=	$(INCLUDE) -DARM7
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions -fno-rtti
 
 
-ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-specs=../ds_arm7_ram.specs -g $(ARCH) -Wl,-Map,$(notdir $*).map
+ASFLAGS	:=	-g $(ARCH) $(INCLUDE)
+LDFLAGS	=	-specs=ds_arm7.specs -g $(ARCH) -Wl,-Map,$(notdir $*).map
 
 LIBS	:=	-lmm7 -lnds7
 
@@ -52,8 +52,7 @@ LIBDIRS	:=	$(LIBNDS)
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
  
-export ARM7BIN	:=	$(TOPDIR)/$(TARGET).arm7
-export ARM7ELF	:=	$(CURDIR)/$(TARGET).arm7.elf
+export ARM7ELF	:=	$(CURDIR)/$(TARGET).elf
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir))
@@ -107,11 +106,6 @@ DEPENDS	:=	$(OFILES:.o=.d)
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
-$(ARM7BIN)	:	$(ARM7ELF)
-	@$(OBJCOPY) -O binary $< $@
-	@echo built ... $(notdir $@)
-
-
 $(ARM7ELF)	:	$(OFILES)
 	@echo linking $(notdir $@)
 	@$(LD)  $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $@
