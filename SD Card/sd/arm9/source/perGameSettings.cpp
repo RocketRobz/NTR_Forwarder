@@ -27,17 +27,17 @@ GameSettings::GameSettings(const std::string &filename) : filepath("sd:/_nds/ntr
 }
 
 void GameSettings::save() {
-	ini.GetInt("GAMESETTINGS", "LANGUAGE", language);
-	ini.GetInt("GAMESETTINGS", "REGION", region);
-	ini.GetInt("GAMESETTINGS", "SAVE_NUMBER", saveNo);
-	ini.GetInt("GAMESETTINGS", "DSI_MODE", dsiMode);
-	ini.GetInt("GAMESETTINGS", "BOOST_CPU", boostCpu);
-	ini.GetInt("GAMESETTINGS", "BOOST_VRAM", boostVram);
-	ini.GetInt("GAMESETTINGS", "CARD_READ_DMA", cardReadDMA);
-	ini.GetInt("GAMESETTINGS", "ASYNC_CARD_READ", asyncCardRead);
-	ini.GetInt("GAMESETTINGS", "SWI_HALT_HOOK", swiHaltHook);
-	ini.GetInt("GAMESETTINGS", "EXTENDED_MEMORY", expandRomSpace);
-	ini.GetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
+	ini.SetInt("GAMESETTINGS", "LANGUAGE", language);
+	ini.SetInt("GAMESETTINGS", "REGION", region);
+	ini.SetInt("GAMESETTINGS", "SAVE_NUMBER", saveNo);
+	ini.SetInt("GAMESETTINGS", "DSI_MODE", dsiMode);
+	ini.SetInt("GAMESETTINGS", "BOOST_CPU", boostCpu);
+	ini.SetInt("GAMESETTINGS", "BOOST_VRAM", boostVram);
+	ini.SetInt("GAMESETTINGS", "CARD_READ_DMA", cardReadDMA);
+	ini.SetInt("GAMESETTINGS", "ASYNC_CARD_READ", asyncCardRead);
+	ini.SetInt("GAMESETTINGS", "SWI_HALT_HOOK", swiHaltHook);
+	ini.SetInt("GAMESETTINGS", "EXTENDED_MEMORY", expandRomSpace);
+	ini.SetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
 
 	// Ensure the folder exists
 	if(access("sd:/_nds", F_OK) != 0)
