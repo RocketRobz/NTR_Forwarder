@@ -371,7 +371,7 @@ int main(int argc, char **argv) {
 
 		GameSettings gameSettings(filename);
 		scanKeys();
-		if(keysHeld() & (KEY_X | KEY_SELECT)) {
+		if(keysHeld() & KEY_Y) {
 			gameSettings.menu();
 		}
 
