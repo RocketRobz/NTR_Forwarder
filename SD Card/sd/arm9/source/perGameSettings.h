@@ -6,11 +6,11 @@
 #include "inifile.h"
 
 class GameSettings {
-	std::string filepath;
+	std::string iniPath, romPath;
 	CIniFile ini;
 
 public:
-	GameSettings(const std::string &filename);
+	GameSettings(const std::string &fileName, const std::string &filePath);
 
 	int language = -2;
 	int region = -3;

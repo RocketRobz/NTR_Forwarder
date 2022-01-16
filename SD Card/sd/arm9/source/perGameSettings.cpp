@@ -1,4 +1,5 @@
 #include "perGameSettings.h"
+#include "cheat.h"
 
 #include <nds.h>
 #include <dirent.h>
@@ -12,7 +13,7 @@ constexpr std::array<const char *, 3> vramLabels = {"Default", "DS Mode", "DSi M
 constexpr std::array<const char *, 4> expandLabels = {"Default", "No", "Yes", "Yes+512 KB"};
 constexpr std::array<const char *, 3> bootstrapLabels = {"Default", "Release", "Nightly"};
 
-GameSettings::GameSettings(const std::string &filename) : filepath("sd:/_nds/ntr-forwarder/gamesettings/" + filename + ".ini"), ini(filepath) {
+GameSettings::GameSettings(const std::string &fileName, const std::string &filePath) : iniPath("sd:/_nds/ntr-forwarder/gamesettings/" + fileName + ".ini"), romPath(filePath), ini(iniPath) {
 	language = ini.GetInt("GAMESETTINGS", "LANGUAGE", language);
 	region = ini.GetInt("GAMESETTINGS", "REGION", region);
 	saveNo = ini.GetInt("GAMESETTINGS", "SAVE_NUMBER", saveNo);
@@ -47,7 +48,7 @@ void GameSettings::save() {
 	if(access("sd:/_nds/ntr-forwarder/gamesettings", F_OK) != 0)
 		mkdir("sd:/_nds/ntr-forwarder/gamesettings", 0777);
 
-	ini.SaveIniFile(filepath);
+	ini.SaveIniFile(iniPath);
 }
 
 void GameSettings::menu() {
@@ -69,7 +70,7 @@ void GameSettings::menu() {
 		iprintf("  SWI Halt Hook: %s\n", offOnLabels[swiHaltHook + 1]);
 		iprintf("  Expand ROM in RAM: %s\n", expandLabels[expandRomSpace + 1]);
 		iprintf("  Bootstrap File: %s\n", bootstrapLabels[bootstrapFile + 1]);
-		iprintf("\nPress <B> to cancel,\n<START> to save\n");
+		iprintf("\n<B> cancel, <START> save,\n<X> cheats\n");
 
 		// Print cursor
 		iprintf("\x1b[%d;0H>", 2 + cursorPosition);
@@ -185,6 +186,9 @@ void GameSettings::menu() {
 			}
 		} else if(held & KEY_B) {
 			return;
+		} else if(held & KEY_X) {
+			CheatCodelist codelist;
+			codelist.selectCheats(romPath);
 		} else if(held & KEY_START) {
 			save();
 			return;

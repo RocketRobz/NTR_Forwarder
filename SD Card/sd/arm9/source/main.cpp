@@ -15,6 +15,7 @@
 #include "nitrofs.h"
 #include "tonccpy.h"
 
+#include "cheat.h"
 #include "inifile.h"
 #include "fileCopy.h"
 #include "perGameSettings.h"
@@ -366,7 +367,8 @@ int main(int argc, char **argv) {
 			filename.erase(0, last_slash_idx + 1);
 		}
 
-		GameSettings gameSettings(filename);
+		swiWaitForVBlank();
+		GameSettings gameSettings(filename, ndsPath);
 		scanKeys();
 		if(keysHeld() & KEY_Y) {
 			gameSettings.menu();
@@ -536,6 +538,49 @@ int main(int argc, char **argv) {
 						swiWaitForVBlank();
 					}
 				}
+			}
+
+			// load cheats
+			CheatCodelist codelist;
+			u32 gameCode, crc32;
+
+			bool cheatsEnabled = true;
+			const char* cheatDataBin = "sd:/_nds/nds-bootstrap/cheatData.bin";
+			mkdir("sd:/_nds", 0777);
+			mkdir("sd:/_nds/nds-bootstrap", 0777);
+			if(codelist.romData(ndsPath, gameCode, crc32)) {
+				long cheatOffset; size_t cheatSize;
+				// First try ntr-forwarder folder
+				FILE* dat=fopen("sd:/_nds/ntr-forwarder/extras/usrcheat.dat","rb");
+				// If that fails, try TWiLight's file
+				if(!dat)
+					dat=fopen("sd:/_nds/TWiLightMenu/extras/usrcheat.dat","rb");
+
+				if (dat) {
+					if (codelist.searchCheatData(dat, gameCode, crc32, cheatOffset, cheatSize)) {
+						codelist.parse(ndsPath);
+						codelist.writeCheatsToFile(cheatDataBin);
+						FILE* cheatData=fopen(cheatDataBin,"rb");
+						if (cheatData) {
+							u32 check[2];
+							fread(check, 1, 8, cheatData);
+							fclose(cheatData);
+							if (check[1] == 0xCF000000 || getFileSize(cheatDataBin) > 0x1C00) {
+								cheatsEnabled = false;
+							}
+						}
+					} else {
+						cheatsEnabled = false;
+					}
+					fclose(dat);
+				} else {
+					cheatsEnabled = false;
+				}
+			} else {
+				cheatsEnabled = false;
+			}
+			if (!cheatsEnabled) {
+				remove(cheatDataBin);
 			}
 
 			CIniFile bootstrapini( "sd:/_nds/nds-bootstrap.ini" );
