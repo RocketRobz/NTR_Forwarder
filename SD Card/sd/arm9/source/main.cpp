@@ -551,7 +551,7 @@ int main(int argc, char **argv) {
 			if(codelist.romData(ndsPath, gameCode, crc32)) {
 				long cheatOffset; size_t cheatSize;
 				// First try ntr-forwarder folder
-				FILE* dat=fopen("sd:/_nds/ntr-forwarder/extras/usrcheat.dat","rb");
+				FILE* dat=fopen("sd:/_nds/ntr-forwarder/usrcheat.dat","rb");
 				// If that fails, try TWiLight's file
 				if(!dat)
 					dat=fopen("sd:/_nds/TWiLightMenu/extras/usrcheat.dat","rb");
