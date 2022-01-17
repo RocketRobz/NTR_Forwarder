@@ -23,6 +23,7 @@ public:
 	int swiHaltHook = -1;
 	int expandRomSpace = -1;
 	int bootstrapFile = -1;
+	int widescreen = -1;
 
 	void save(void);
 

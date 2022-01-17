@@ -33,8 +33,34 @@ static int region = -2;
 static bool cacheFatTable = false;
 
 static bool bootstrapFile = false;
+static bool widescreenLoaded = false;
 
 static bool consoleInited = false;
+
+int consoleModel = 0; // 0: Retail DSi
+
+//---------------------------------------------------------------------------------
+void stop (void) {
+//---------------------------------------------------------------------------------
+	while (1) {
+		swiWaitForVBlank();
+	}
+}
+
+char filePath[PATH_MAX];
+
+//---------------------------------------------------------------------------------
+void doPause() {
+//---------------------------------------------------------------------------------
+	iprintf("Press start...\n");
+	while(1) {
+		scanKeys();
+		if(keysDown() & KEY_START)
+			break;
+		swiWaitForVBlank();
+	}
+	scanKeys();
+}
 
 bool extention(const std::string& filename, const char* ext) {
 	if(strcasecmp(filename.c_str() + filename.size() - strlen(ext), ext)) {
@@ -191,8 +217,6 @@ std::string setApFix(const char *filename) {
 		return ipsPath;
 	}
 
-	useTwlmPath = (access("sd:/_nds/TWiLightMenu", F_OK) == 0);
-
 	FILE *file = fopen(useTwlmPath ? "sd:/_nds/TWiLightMenu/extras/apfix.pck" : "sd:/_nds/ntr-forwarder/apfix.pck", "rb");
 	if (file) {
 		char buf[5] = {0};
@@ -258,27 +282,183 @@ std::string setApFix(const char *filename) {
 	return "";
 }
 
-//---------------------------------------------------------------------------------
-void stop (void) {
-//---------------------------------------------------------------------------------
-	while (1) {
-		swiWaitForVBlank();
+void setAutoload(const char *resetTid) {
+	u8 *autoloadParams = (u8 *)0x02000300;
+
+	*((u32 *)autoloadParams) = 0x434E4C54; // 'TLNC'
+	autoloadParams[4] = 0x01;
+	autoloadParams[5] = 0x18; // Length of data
+
+	// Old TID, can be 0
+	memset(autoloadParams + 8, 0, 8);
+
+	// New TID
+	memcpy(autoloadParams + 16, resetTid, 4);
+	*((u32 *)(autoloadParams + 20)) = 0x00030000 | resetTid[4];
+
+	*((u32 *)(autoloadParams + 24)) = 0x00000017; // Flags
+	*((u32 *)(autoloadParams + 28)) = 0x00000000;
+
+	// CRC16
+	u16 crc16 = swiCRC16(0xFFFF, autoloadParams + 8, 0x18);
+	memcpy(autoloadParams + 6, &crc16, 2);
+}
+
+/**
+ * Enable widescreen for some games.
+ */
+void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid) {
+	bool useTwlmPath = (access("sd:/_nds/TWiLightMenu/extras/widescreen.pck", F_OK) == 0);
+
+	const char* wideCheatDataPath = "sd:/_nds/nds-bootstrap/wideCheatData.bin";
+	remove(wideCheatDataPath);
+
+	if (isHomebrew) {
+		if (access("sd:/luma/sysmodules/TwlBg.cxi", F_OK) == 0) {
+			rename("sd:/luma/sysmodules/TwlBg.cxi", "sd:/_nds/ntr-forwarder/TwlBg.cxi.bak");
+		}
+		if (rename("sd:/_nds/TWiLightMenu/TwlBg/Widescreen.cxi", "sd:/luma/sysmodules/TwlBg.cxi") == 0) {
+			CIniFile ntrforwarderini("sd:/_nds/ntr_forwarder.ini");
+			ntrforwarderini.SetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", true);
+			ntrforwarderini.SaveIniFile("sd:/_nds/ntr_forwarder.ini");
+
+			setAutoload(resetTid);
+			DC_FlushAll();
+			fifoSendValue32(FIFO_USER_01, 1);
+			stop();
+		}
+		return;
+	}
+
+	char tid[5];
+	u16 crc16;
+
+	FILE *f_nds_file = fopen(filename, "rb");
+	fseek(f_nds_file, offsetof(sNDSHeaderExt, gameCode), SEEK_SET);
+	fread(tid, 1, 4, f_nds_file);
+	fseek(f_nds_file, offsetof(sNDSHeaderExt, headerCRC16), SEEK_SET);
+	fread(&crc16, sizeof(u16), 1, f_nds_file);
+	fclose(f_nds_file);
+	tid[4] = 0;
+
+	bool wideCheatFound = false;
+	char wideBinPath[256];
+	snprintf(wideBinPath, sizeof(wideBinPath), "sd:/_nds/%s/widescreen/%s.bin", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
+	wideCheatFound = (access(wideBinPath, F_OK) == 0);
+
+	if (!wideCheatFound) {
+		snprintf(wideBinPath, sizeof(wideBinPath), "sd:/_nds/%s/widescreen/%s-%X.bin", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), tid, crc16);
+		wideCheatFound = (access(wideBinPath, F_OK) == 0);
+	}
+
+	mkdir("sd:/_nds", 0777);
+	mkdir("sd:/_nds/nds-bootstrap", 0777);
+
+	if (wideCheatFound) {
+		if (fcopy(wideBinPath, wideCheatDataPath) != 0) {
+			remove(wideCheatDataPath);
+			consoleDemoInit();
+			iprintf("Failed to copy widescreen\ncode for the game.");
+			for (int i = 0; i < 60 * 3; i++) {
+				swiWaitForVBlank(); // Wait 3 seconds
+			}
+			return;
+		}
+	} else {
+		FILE *file = fopen(useTwlmPath ? "sd:/_nds/TWiLightMenu/extras/widescreen.pck" : "sd:/_nds/ntr-forwarder/widescreen.pck", "rb");
+		if (file) {
+			char buf[5] = {0};
+			fread(buf, 1, 4, file);
+			if (strcmp(buf, ".PCK") != 0) // Invalid file
+				return;
+
+			u32 fileCount;
+			fread(&fileCount, 1, sizeof(fileCount), file);
+
+			u32 offset = 0, size = 0;
+
+			// Try binary search for the game
+			int left = 0;
+			int right = fileCount;
+
+			while (left <= right) {
+				int mid = left + ((right - left) / 2);
+				fseek(file, 16 + mid * 16, SEEK_SET);
+				fread(buf, 1, 4, file);
+				int cmp = strcmp(buf, tid);
+				if (cmp == 0) { // TID matches, check CRC
+					u16 crc;
+					fread(&crc, 1, sizeof(crc), file);
+
+					if (crc == crc16) { // CRC matches
+						fread(&offset, 1, sizeof(offset), file);
+						fread(&size, 1, sizeof(size), file);
+						wideCheatFound = true;
+						break;
+					} else if (crc < crc16) {
+						left = mid + 1;
+					} else {
+						right = mid - 1;
+					}
+				} else if (cmp < 0) {
+					left = mid + 1;
+				} else {
+					right = mid - 1;
+				}
+			}
+
+			if (offset > 0) {
+				fseek(file, offset, SEEK_SET);
+				u8 *buffer = new u8[size];
+				fread(buffer, 1, size, file);
+
+				FILE *out = fopen("sd:/_nds/nds-bootstrap/wideCheatData.bin", "wb");
+				if(out) {
+					fwrite(buffer, 1, size, out);
+					fclose(out);
+				}
+				delete[] buffer;
+			}
+
+			fclose(file);
+		}
+	}
+	if (wideCheatFound && (access("sd:/_nds/TWiLightMenu/TwlBg/Widescreen.cxi", F_OK) == 0)) {
+		if (access("sd:/luma/sysmodules/TwlBg.cxi", F_OK) == 0) {
+			rename("sd:/luma/sysmodules/TwlBg.cxi", "sd:/_nds/TWiLightMenu/TwlBg/TwlBg.cxi.bak");
+		}
+		if (rename("sd:/_nds/TWiLightMenu/TwlBg/Widescreen.cxi", "sd:/luma/sysmodules/TwlBg.cxi") == 0) {
+			CIniFile ntrforwarderini("sd:/_nds/ntr_forwarder.ini");
+			ntrforwarderini.SetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", true);
+			ntrforwarderini.SaveIniFile("sd:/_nds/ntr_forwarder.ini");
+
+			setAutoload(resetTid);
+			DC_FlushAll();
+			fifoSendValue32(FIFO_USER_01, 1);
+			stop();
+		}
 	}
 }
 
-char filePath[PATH_MAX];
+void UnsetWidescreen() {
+	bool useTwlmPath = (access("sd:/_nds/TWiLightMenu/extras/widescreen.pck", F_OK) == 0);
 
-//---------------------------------------------------------------------------------
-void doPause() {
-//---------------------------------------------------------------------------------
-	iprintf("Press start...\n");
-	while(1) {
-		scanKeys();
-		if(keysDown() & KEY_START)
-			break;
-		swiWaitForVBlank();
+	CIniFile ntrforwarderini("sd:/_nds/ntr_forwarder.ini");
+	ntrforwarderini.SetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", false);
+	ntrforwarderini.SaveIniFile("sd:/_nds/ntr_forwarder.ini");
+
+	// Revert back to 4:3 for next boot
+	if(useTwlmPath)
+		mkdir("sd:/_nds/TWiLightMenu/TwlBg", 0777);
+	if (rename("sd:/luma/sysmodules/TwlBg.cxi", (useTwlmPath ? "sd:/_nds/TWiLightMenu/TwlBg/Widescreen.cxi" : "sd:/_nds/ntr-forwarder/Widescreen.cxi")) != 0) {
+		consoleDemoInit();
+		iprintf("Failed to rename TwlBg.cxi\n");
+		iprintf("back to Widescreen.cxi\n");
+		for (int i = 0; i < 60*3; i++) swiWaitForVBlank();
 	}
-	scanKeys();
+	if (access("sd:/_nds/ntr-forwarder/TwlBg.cxi.bak", F_OK) == 0) {
+		rename("sd:/_nds/ntr-forwarder/TwlBg.cxi.bak", "sd:/luma/sysmodules/TwlBg.cxi");
+	}
 }
 
 std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
@@ -297,8 +477,6 @@ std::string filename;
 std::string savename;
 std::string romFolderNoSlash;
 std::string savepath;
-
-std::vector<char*> argarray;
 
 static inline void takeWhileMsg() {
 	#ifdef DSI
@@ -325,23 +503,28 @@ int main(int argc, char **argv) {
 	*(vu32*)0x0DFFFE0C = 0x4652544E;
 	bool debugRam = (*(vu32*)0x0DFFFE0C == 0x4652544E);
 
-	int consoleModel = 0; // 0: Retail DSi
 	if (debugRam) {
 		consoleModel = fifoGetValue32(FIFO_USER_05) == 0xD2 ? 1 : 2; // 1: Panda DSi, 2: 3DS/2DS
 	}
 
 	if (fatInitDefault()) {
-		if (access(argv[1], F_OK) != 0) {
+		if (argc < 2 || access(argv[1], F_OK) != 0) {
 			consoleDemoInit();
-			iprintf("Not found:\n%s\n\n", argv[1]);
-			iprintf("Please recreate the forwarder\n");
-			iprintf("with the correct ROM path.\n");
+			if (argc < 2) {
+				iprintf("sdcard.nds should not be loaded\ndirectly.\n");
+				iprintf("Load a forwarder instead.\n");
+			} else {
+				iprintf("Not found:\n%s\n\n", argv[1]);
+				iprintf("Please recreate the forwarder\n");
+				iprintf("with the correct ROM path.\n");
+			}
 		} else {
 		nitroFSInit(argv[0]);
 
 		CIniFile ntrforwarderini( "sd:/_nds/ntr_forwarder.ini" );
 
 		bootstrapFile = ntrforwarderini.GetInt("NTR-FORWARDER", "BOOTSTRAP_FILE", 0);
+		widescreenLoaded = ntrforwarderini.GetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", false);
 
 		ndsPath = (std::string)argv[1];
 		/*consoleDemoInit();
@@ -395,15 +578,14 @@ int main(int argc, char **argv) {
 			isDSiWare = true; // Is a DSiWare game
 		}
 
-		argarray.push_back(strdup("NULL"));
-
 		if (isHomebrew == 2) {
-			argarray.at(0) = argv[1];
-			int err = runNdsFile (argarray[0], argarray.size(), (const char **)&argarray[0]);
+			const char *argarray[] = {argv[1]};
+			int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 			if (!consoleInited) {
 				consoleDemoInit();
 				consoleInited = true;
 			}
+			consoleDemoInit();
 			iprintf("Start failed. Error %i\n", err);
 			if (err == 1) iprintf ("ROM not found.\n");
 		} else {
@@ -418,7 +600,8 @@ int main(int argc, char **argv) {
 
 			// Delete cheat data
 			remove("sd:/_nds/nds-bootstrap/cheatData.bin");
-			remove("sd:/_nds/nds-bootstrap/wideCheatData.bin");
+			if(!widescreenLoaded)
+				remove("sd:/_nds/nds-bootstrap/wideCheatData.bin");
 
 			const char *typeToReplace = ".nds";
 			if (extention(filename, ".dsi")) {
@@ -540,6 +723,23 @@ int main(int argc, char **argv) {
 				}
 			}
 
+			// Set widescreen
+			if(consoleModel == 2 && gameSettings.widescreen == 1) {
+				if(widescreenLoaded) {
+					UnsetWidescreen();
+				} else if(argc >= 3) {
+					SetWidescreen(ndsPath.c_str(), isHomebrew, argv[2]);
+				} else {
+					consoleDemoInit();
+					iprintf("If using a 3DS-mode forwarder,\n");
+					iprintf("reinstall bootstrap.cia to use\n");
+					iprintf("widescreen.\n\n");
+					iprintf("If using a DSi-mode forwarder\n");
+					iprintf("then remake the forwarder.\n");
+					goto error;
+				}
+			}
+
 			// load cheats
 			CheatCodelist codelist;
 			u32 gameCode, crc32;
@@ -652,21 +852,23 @@ int main(int argc, char **argv) {
 			bootstrapini.SaveIniFile( "sd:/_nds/nds-bootstrap.ini" );
 
 			if (isHomebrew == 1) {
-				argarray.at(0) = (char*)(bootstrapFile ? "sd:/_nds/nds-bootstrap-hb-nightly.nds" : "sd:/_nds/nds-bootstrap-hb-release.nds");
-				int err = runNdsFile (argarray[0], argarray.size(), (const char **)&argarray[0]);
+				const char *argarray[] = {bootstrapFile ? "sd:/_nds/nds-bootstrap-hb-nightly.nds" : "sd:/_nds/nds-bootstrap-hb-release.nds"};
+				int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 				if (!consoleInited) {
 					consoleDemoInit();
 					consoleInited = true;
 				}
+				consoleDemoInit();
 				iprintf("Start failed. Error %i\n", err);
 				if (err == 1) iprintf ("nds-bootstrap (hb) not found.\n");
 			} else {
-				argarray.at(0) = (char*)(bootstrapFile ? "sd:/_nds/nds-bootstrap-nightly.nds" : "sd:/_nds/nds-bootstrap-release.nds");
-				int err = runNdsFile (argarray[0], argarray.size(), (const char **)&argarray[0]);
+				const char *argarray[] = {bootstrapFile ? "sd:/_nds/nds-bootstrap-nightly.nds" : "sd:/_nds/nds-bootstrap-release.nds"};
+				int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 				if (!consoleInited) {
 					consoleDemoInit();
 					consoleInited = true;
 				}
+				consoleDemoInit();
 				iprintf("Start failed. Error %i\n", err);
 				if (err == 1) iprintf ("nds-bootstrap not found.\n");
 			}
@@ -681,6 +883,7 @@ int main(int argc, char **argv) {
 		iprintf ("fatinitDefault failed!\n");
 	}
 
+error:
 	iprintf ("\n");		
 	iprintf ("Press B to return to\n");
 	iprintf (consoleModel >= 2 ? "HOME Menu.\n" : "DSi Menu.\n");

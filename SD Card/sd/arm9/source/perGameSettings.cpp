@@ -4,6 +4,8 @@
 #include <nds.h>
 #include <dirent.h>
 
+extern int consoleModel;
+
 constexpr std::array<const char *, 3> offOnLabels = {"Default", "Off", "On"};
 constexpr std::array<const char *, 10> languageLabels = {"Default", "System", "Japanese", "English", "French", "German", "Italian", "Spanish", "Chinese", "Korean"};
 constexpr std::array<const char *, 9> regionLabels = {"Default", "Per-game", "System", "Japan", "USA", "Europe", "Australia", "China", "Korea"};
@@ -25,6 +27,7 @@ GameSettings::GameSettings(const std::string &fileName, const std::string &fileP
 	swiHaltHook = ini.GetInt("GAMESETTINGS", "SWI_HALT_HOOK", swiHaltHook);
 	expandRomSpace = ini.GetInt("GAMESETTINGS", "EXTENDED_MEMORY", expandRomSpace);
 	bootstrapFile = ini.GetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
+	widescreen = ini.GetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
 }
 
 void GameSettings::save() {
@@ -39,6 +42,7 @@ void GameSettings::save() {
 	ini.SetInt("GAMESETTINGS", "SWI_HALT_HOOK", swiHaltHook);
 	ini.SetInt("GAMESETTINGS", "EXTENDED_MEMORY", expandRomSpace);
 	ini.SetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
+	ini.SetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
 
 	// Ensure the folder exists
 	if(access("sd:/_nds", F_OK) != 0)
@@ -56,6 +60,7 @@ void GameSettings::menu() {
 
 	u16 held;
 	int cursorPosition = 0;
+	int numOptions = consoleModel == 2 ? 11 : 10;
 	while(1) {
 		consoleClear();
 		iprintf("ntr-forwarder\n\n");
@@ -70,6 +75,8 @@ void GameSettings::menu() {
 		iprintf("  SWI Halt Hook: %s\n", offOnLabels[swiHaltHook + 1]);
 		iprintf("  Expand ROM in RAM: %s\n", expandLabels[expandRomSpace + 1]);
 		iprintf("  Bootstrap File: %s\n", bootstrapLabels[bootstrapFile + 1]);
+		if(consoleModel == 2)
+			iprintf("  Widescreen: %s\n", offOnLabels[widescreen + 1]);
 		iprintf("\n<B> cancel, <START> save,\n<X> cheats\n");
 
 		// Print cursor
@@ -85,10 +92,10 @@ void GameSettings::menu() {
 		if(held & KEY_UP) {
 			cursorPosition--;
 			if(cursorPosition < 0)
-				cursorPosition = 10;
+				cursorPosition = numOptions;
 		} else if(held & KEY_DOWN) {
 			cursorPosition++;
-			if(cursorPosition > 10)
+			if(cursorPosition > numOptions)
 				cursorPosition = 0;
 		} else if(held & (KEY_LEFT | KEY_A)) {
 			switch(cursorPosition) {
@@ -136,6 +143,10 @@ void GameSettings::menu() {
 					bootstrapFile--;
 					if(bootstrapFile < -1) bootstrapFile = 1;
 					break;
+				case 11:
+					widescreen--;
+					if(widescreen < -1) widescreen = 1;
+					break;
 			}
 		} else if(held & KEY_RIGHT) {
 			switch(cursorPosition) {
@@ -182,6 +193,10 @@ void GameSettings::menu() {
 				case 10:
 					bootstrapFile++;
 					if(bootstrapFile > 1) bootstrapFile = -1;
+					break;
+				case 11:
+					widescreen++;
+					if(widescreen > 1) widescreen = -1;
 					break;
 			}
 		} else if(held & KEY_B) {

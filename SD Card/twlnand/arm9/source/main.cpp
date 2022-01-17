@@ -27,8 +27,6 @@
 #include <limits.h>
 #include <nds/disc_io.h>
 
-#include <string>
-#include <vector>
 #include <string.h>
 #include <unistd.h>
 
@@ -52,12 +50,18 @@ int main(int argc, char **argv) {
 		fwrite(__DSiHeader, 1, 0x1000, headerFile);
 		fclose(headerFile);
 
-		std::string ndsPath = "sd:/<<<Start NDS Path                                                                                                                                                                                                                            End NDS Path>>>";
+		const char *ndsPath = "sd:/<<<Start NDS Path                                                                                                                                                                                                                            End NDS Path>>>";
 
-		vector<char*> argarray;
-		argarray.push_back((char*)"sd:/_nds/ntr-forwarder/sdcard.nds");
-		argarray.push_back((char*)ndsPath.c_str());
-		int err = runNdsFile(argarray[0], argarray.size(), (const char **)&argarray[0]);
+		char titleId[6];
+		memcpy(titleId, (const char *)0x02FFE000 + offsetof(tDSiHeader, tid_low), 4); // TID Low
+		titleId[4] = *(const char *)(0x02FFE000 + offsetof(tDSiHeader, tid_high)); // Important byte of TID high
+		titleId[5] = 0;
+		const char *argarray[3] = {
+			"sd:/_nds/ntr-forwarder/sdcard.nds",
+			ndsPath,
+			titleId
+		};
+		int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 
 		consoleDemoInit();
 		iprintf("Start failed. Error %i\n", err);
