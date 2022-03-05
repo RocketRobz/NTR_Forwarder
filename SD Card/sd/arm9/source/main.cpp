@@ -286,18 +286,18 @@ void setAutoload(const char *resetTid) {
 	u8 *autoloadParams = (u8 *)0x02000300;
 
 	toncset32(autoloadParams, 0x434E4C54, 1); // 'TLNC'
-	toncset(autoloadParams+4, 0x01, 1);
-	toncset(autoloadParams+5, 0x18, 1); // Length of data
+	((vu8 *)autoloadParams)[4] = 0x01;
+	((vu8 *)autoloadParams)[5] = 0x18; // Length of data
 
 	// Old TID, can be 0
 	toncset(autoloadParams + 8, 0, 8);
 
 	// New TID
 	tonccpy(autoloadParams + 16, resetTid, 4);
-	toncset32(((u32 *)(autoloadParams + 20)), 0x00030000 | resetTid[4], 1);
+	toncset32(autoloadParams + 20, 0x00030000 | resetTid[4], 1);
 
-	toncset32(((u32 *)(autoloadParams + 24)), 0x00000017, 1); // Flags
-	toncset32(((u32 *)(autoloadParams + 28)), 0x00000000, 1);
+	toncset32(autoloadParams + 24, 0x00000017, 1); // Flags
+	toncset32(autoloadParams + 28, 0x00000000, 1);
 
 	// CRC16
 	u16 crc16 = swiCRC16(0xFFFF, autoloadParams + 8, 0x18);
