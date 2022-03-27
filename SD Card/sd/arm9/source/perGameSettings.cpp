@@ -14,6 +14,7 @@ constexpr std::array<const char *, 3> cpuLabels = {"Default", "67 MHz (NTR)", "1
 constexpr std::array<const char *, 3> vramLabels = {"Default", "DS Mode", "DSi Mode"};
 constexpr std::array<const char *, 4> expandLabels = {"Default", "No", "Yes", "Yes+512 KB"};
 constexpr std::array<const char *, 3> bootstrapLabels = {"Default", "Release", "Nightly"};
+constexpr std::array<const char *, 4> widescreenLabels = {"Default", "Off", "On", "Forced"};
 
 GameSettings::GameSettings(const std::string &fileName, const std::string &filePath) : iniPath("sd:/_nds/ntr-forwarder/gamesettings/" + fileName + ".ini"), romPath(filePath), ini(iniPath) {
 	language = ini.GetInt("GAMESETTINGS", "LANGUAGE", language);
@@ -73,7 +74,7 @@ void GameSettings::menu() {
 		iprintf("  Expand ROM in RAM: %s\n", expandLabels[expandRomSpace + 1]);
 		iprintf("  Bootstrap File: %s\n", bootstrapLabels[bootstrapFile + 1]);
 		if(consoleModel == 2)
-			iprintf("  Widescreen: %s\n", offOnLabels[widescreen + 1]);
+			iprintf("  Widescreen: %s\n", widescreenLabels[widescreen + 1]);
 		iprintf("\n<B> cancel, <START> save,\n<X> cheats\n");
 
 		// Print cursor
@@ -138,7 +139,7 @@ void GameSettings::menu() {
 					break;
 				case 10:
 					widescreen--;
-					if(widescreen < -1) widescreen = 1;
+					if(widescreen < -1) widescreen = 2;
 					break;
 			}
 		} else if(held & KEY_RIGHT) {
@@ -185,7 +186,7 @@ void GameSettings::menu() {
 					break;
 				case 10:
 					widescreen++;
-					if(widescreen > 1) widescreen = -1;
+					if(widescreen > 2) widescreen = -1;
 					break;
 			}
 		} else if(held & KEY_B) {

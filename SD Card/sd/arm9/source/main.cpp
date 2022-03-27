@@ -307,7 +307,7 @@ void setAutoload(const char *resetTid) {
 /**
  * Enable widescreen for some games.
  */
-void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid) {
+void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid, bool force) {
 	bool useTwlmPath = (access("sd:/_nds/TWiLightMenu/extras/widescreen.pck", F_OK) == 0);
 
 	const char* wideCheatDataPath = "sd:/_nds/nds-bootstrap/wideCheatData.bin";
@@ -424,7 +424,7 @@ void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid) 
 			fclose(file);
 		}
 	}
-	if (wideCheatFound && (access("sd:/_nds/TWiLightMenu/TwlBg/Widescreen.cxi", F_OK) == 0 || access("sd:/_nds/ntr-forwarder/Widescreen.cxi", F_OK) == 0)) {
+	if ((wideCheatFound || force) && (access("sd:/_nds/TWiLightMenu/TwlBg/Widescreen.cxi", F_OK) == 0 || access("sd:/_nds/ntr-forwarder/Widescreen.cxi", F_OK) == 0)) {
 		if (access("sd:/luma/sysmodules/TwlBg.cxi", F_OK) == 0) {
 			rename("sd:/luma/sysmodules/TwlBg.cxi", (useTwlmPath ? "sd:/_nds/TWiLightMenu/TwlBg/TwlBg.cxi.bak" : "sd:/_nds/ntr-forwarder/TwlBg.cxi.bak"));
 		}
@@ -740,11 +740,11 @@ int main(int argc, char **argv) {
 			}
 
 			// Set widescreen
-			if(consoleModel == 2 && gameSettings.widescreen == 1) {
+			if(consoleModel == 2 && gameSettings.widescreen >= 1) {
 				if(widescreenLoaded) {
 					UnsetWidescreen();
 				} else if(argc >= 3) {
-					SetWidescreen(ndsPath.c_str(), isHomebrew, argv[2]);
+					SetWidescreen(ndsPath.c_str(), isHomebrew, argv[2], gameSettings.widescreen == 2);
 				} else {
 					consoleDemoInit();
 					iprintf("If using a 3DS-mode forwarder,\n");
