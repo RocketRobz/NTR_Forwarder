@@ -20,9 +20,6 @@
 #include "fileCopy.h"
 #include "perGameSettings.h"
 
-#include "twlClockExcludeMap.h"
-#include "dmaExcludeMap.h"
-#include "asyncReadExcludeMap.h"
 #include "donorMap.h"
 #include "saveMap.h"
 #include "ROMList.h"
@@ -80,75 +77,6 @@ void RemoveTrailingSlashes(std::string& path)
 	while (!path.empty() && path[path.size()-1] == '/') {
 		path.resize(path.size()-1);
 	}
-}
-
-/**
- * Disable TWL clock speed for a specific game.
- */
-bool setClockSpeed(int current, const char* filename) {
-	FILE *f_nds_file = fopen(filename, "rb");
-
-	char game_TID[5];
-	fseek(f_nds_file, 0xC, SEEK_SET);
-	fread(game_TID, 1, 4, f_nds_file);
-	game_TID[4] = 0;
-	fclose(f_nds_file);
-
-	// TODO: If the list gets large enough, switch to bsearch().
-	for (unsigned int i = 0; i < sizeof(twlClockExcludeList)/sizeof(twlClockExcludeList[0]); i++) {
-		if (memcmp(game_TID, twlClockExcludeList[i], 3) == 0) {
-			// Found match
-			return false;
-		}
-	}
-
-	return current == -1 ? false : current;
-}
-
-/**
- * Disable card read DMA for a specific game.
- */
-bool setCardReadDMA(int current, const char* filename) {
-	FILE *f_nds_file = fopen(filename, "rb");
-
-	char game_TID[5];
-	fseek(f_nds_file, 0xC, SEEK_SET);
-	fread(game_TID, 1, 4, f_nds_file);
-	game_TID[4] = 0;
-	fclose(f_nds_file);
-
-	// TODO: If the list gets large enough, switch to bsearch().
-	for (unsigned int i = 0; i < sizeof(cardReadDMAExcludeList)/sizeof(cardReadDMAExcludeList[0]); i++) {
-		if (memcmp(game_TID, cardReadDMAExcludeList[i], 3) == 0) {
-			// Found match
-			return false;
-		}
-	}
-
-	return current == -1 ? true : current;
-}
-
-/**
- * Disable asynch card read for a specific game.
- */
-bool setAsyncCardRead(int current, const char* filename) {
-	FILE *f_nds_file = fopen(filename, "rb");
-
-	char game_TID[5];
-	fseek(f_nds_file, 0xC, SEEK_SET);
-	fread(game_TID, 1, 4, f_nds_file);
-	game_TID[4] = 0;
-	fclose(f_nds_file);
-
-	// TODO: If the list gets large enough, switch to bsearch().
-	for (unsigned int i = 0; i < sizeof(asyncReadExcludeList)/sizeof(asyncReadExcludeList[0]); i++) {
-		if (memcmp(game_TID, asyncReadExcludeList[i], 3) == 0) {
-			// Found match
-			return false;
-		}
-	}
-
-	return current == -1 ? false : current;
 }
 
 /**
@@ -859,10 +787,10 @@ int main(int argc, char **argv) {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "AP_FIX_PATH", isDSiWare ? "" : setApFix(filename.c_str()));
 			}
 			bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
-			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_CPU", setClockSpeed(gameSettings.boostCpu, ndsPath.c_str()));
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_CPU", gameSettings.boostCpu);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_VRAM", gameSettings.boostVram == -1 ? false : gameSettings.boostVram);
-			bootstrapini.SetInt("NDS-BOOTSTRAP", "CARD_READ_DMA", setCardReadDMA(gameSettings.cardReadDMA, ndsPath.c_str()));
-			bootstrapini.SetInt("NDS-BOOTSTRAP", "ASYNC_CARD_READ", setAsyncCardRead(gameSettings.asyncCardRead, ndsPath.c_str()));
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "CARD_READ_DMA", gameSettings.cardReadDMA);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "ASYNC_CARD_READ", gameSettings.asyncCardRead);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "DSI_MODE", dsModeForced ? 0 : (gameSettings.dsiMode == -1 ? true : gameSettings.dsiMode));
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "SWI_HALT_HOOK", gameSettings.swiHaltHook == -1 ? true : gameSettings.swiHaltHook);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "EXTENDED_MEMORY", gameSettings.expandRomSpace == -1 ? false : gameSettings.expandRomSpace);
