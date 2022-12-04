@@ -1,6 +1,7 @@
 #include "perGameSettings.h"
 #include "cheat.h"
 
+#include <array>
 #include <nds.h>
 #include <dirent.h>
 
