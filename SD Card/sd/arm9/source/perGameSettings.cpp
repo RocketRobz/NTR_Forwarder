@@ -44,10 +44,6 @@ void GameSettings::save() {
 	ini.SetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
 
 	// Ensure the folder exists
-	if(access("/_nds", F_OK) != 0)
-		mkdir("/_nds", 0777);
-	if(access("/_nds/ntr-forwarder", F_OK) != 0)
-		mkdir("/_nds/ntr-forwarder", 0777);
 	if(access("/_nds/ntr-forwarder/gamesettings", F_OK) != 0)
 		mkdir("/_nds/ntr-forwarder/gamesettings", 0777);
 
