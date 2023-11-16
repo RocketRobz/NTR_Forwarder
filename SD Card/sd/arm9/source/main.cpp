@@ -108,7 +108,7 @@ int SetDonorSDK(const char* filename) {
  * Fix AP for some games.
  */
 std::string setApFix(const char *filename, const bool isRunFromSd) {
-	const bool useTwlmPath = (access(isRunFromSd ? "sd:/_nds/TWiLightMenu/extras/apfix.pck" : "fat:/_nds/TWiLightMenu/extras/apfix.pck", F_OK) == 0);
+	const bool useTwlmPath = (access("/_nds/TWiLightMenu/extras/apfix.pck", F_OK) == 0);
 
 	char game_TID[5];
 	u16 headerCRC16 = 0;
@@ -116,10 +116,10 @@ std::string setApFix(const char *filename, const bool isRunFromSd) {
 	bool ipsFound = false;
 	bool cheatVer = true;
 	char ipsPath[256];
-	snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s.ips", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
+	snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s.ips", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
 	ipsFound = (access(ipsPath, F_OK) == 0);
 	if (!ipsFound) {
-		snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s.bin", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
+		snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s.bin", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
 		ipsFound = (access(ipsPath, F_OK) == 0);
 	} else {
 		cheatVer = false;
@@ -135,10 +135,10 @@ std::string setApFix(const char *filename, const bool isRunFromSd) {
 		fclose(f_nds_file);
 		game_TID[4] = 0;
 
-		snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s-%X.ips", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
+		snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s-%X.ips", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
 		ipsFound = (access(ipsPath, F_OK) == 0);
 		if (!ipsFound) {
-			snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s-%X.bin", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
+			snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s-%X.bin", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
 			ipsFound = (access(ipsPath, F_OK) == 0);
 		} else {
 			cheatVer = false;
@@ -149,7 +149,7 @@ std::string setApFix(const char *filename, const bool isRunFromSd) {
 		return ipsPath;
 	}
 
-	FILE *file = fopen(isRunFromSd ? (useTwlmPath ? "sd:/_nds/TWiLightMenu/extras/apfix.pck" : "sd:/_nds/ntr-forwarder/apfix.pck") : (useTwlmPath ? "fat:/_nds/TWiLightMenu/extras/apfix.pck" : "fat:/_nds/ntr-forwarder/apfix.pck"), "rb");
+	FILE *file = fopen(useTwlmPath ? "/_nds/TWiLightMenu/extras/apfix.pck" : "/_nds/ntr-forwarder/apfix.pck", "rb");
 	if (file) {
 		char buf[5] = {0};
 		fread(buf, 1, 4, file);
@@ -196,8 +196,8 @@ std::string setApFix(const char *filename, const bool isRunFromSd) {
 			u8 *buffer = new u8[size];
 			fread(buffer, 1, size, file);
 
-			mkdir(isRunFromSd ? "sd:/_nds/nds-bootstrap" : "fat:/_nds/nds-bootstrap", 0777);
-			snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/nds-bootstrap/apFix%s", isRunFromSd ? "sd" : "fat", cheatVer ? "Cheat.bin" : ".ips");
+			mkdir("/_nds/nds-bootstrap", 0777);
+			snprintf(ipsPath, sizeof(ipsPath), "/_nds/nds-bootstrap/apFix%s", cheatVer ? "Cheat.bin" : ".ips");
 			FILE *out = fopen(ipsPath, "wb");
 			if(out) {
 				fwrite(buffer, 1, size, out);
@@ -592,7 +592,7 @@ int main(int argc, char **argv) {
 			iprintf("Start failed. Error %i\n", err);
 			if (err == 1) iprintf ("ROM not found.\n");
 		} else {
-			mkdir(isRunFromSd ? "sd:/_nds/nds-bootstrap" : "fat:/_nds/nds-bootstrap", 0777);
+			mkdir("/_nds/nds-bootstrap", 0777);
 
 			if (isRunFromSd) {
 				if (argc >= 3) {
@@ -618,9 +618,9 @@ int main(int argc, char **argv) {
 			}
 
 			// Delete cheat data
-			remove(isRunFromSd ? "sd:/_nds/nds-bootstrap/cheatData.bin" : "fat:/_nds/nds-bootstrap/cheatData.bin");
+			remove("/_nds/nds-bootstrap/cheatData.bin");
 			if(!widescreenLoaded)
-				remove(isRunFromSd ? "sd:/_nds/nds-bootstrap/wideCheatData.bin" : "fat:/_nds/nds-bootstrap/wideCheatData.bin");
+				remove("/_nds/nds-bootstrap/wideCheatData.bin");
 
 			const char *typeToReplace = ".nds";
 			if (extention(filename, ".dsi")) {
@@ -743,16 +743,15 @@ int main(int argc, char **argv) {
 			u32 gameCode, crc32;
 
 			bool cheatsEnabled = true;
-			const char* cheatDataBin = isRunFromSd ? "sd:/_nds/nds-bootstrap/cheatData.bin" : "fat:/_nds/nds-bootstrap/cheatData.bin";
-			mkdir(isRunFromSd ? "sd:/_nds" : "fat:/_nds", 0777);
-			mkdir(isRunFromSd ? "sd:/_nds/nds-bootstrap" : "fat:/_nds/nds-bootstrap", 0777);
+			const char* cheatDataBin = "/_nds/nds-bootstrap/cheatData.bin";
+			mkdir("/_nds/nds-bootstrap", 0777);
 			if(codelist.romData(ndsPath, gameCode, crc32)) {
 				long cheatOffset; size_t cheatSize;
 				// First try ntr-forwarder folder
-				FILE* dat=fopen(isRunFromSd ? "sd:/_nds/ntr-forwarder/usrcheat.dat" : "fat:/_nds/ntr-forwarder/usrcheat.dat","rb");
+				FILE* dat=fopen("/_nds/ntr-forwarder/usrcheat.dat","rb");
 				// If that fails, try TWiLight's file
 				if(!dat)
-					dat=fopen(isRunFromSd ? "sd:/_nds/TWiLightMenu/extras/usrcheat.dat" : "fat:/_nds/TWiLightMenu/extras/usrcheat.dat","rb");
+					dat=fopen("/_nds/TWiLightMenu/extras/usrcheat.dat","rb");
 
 				if (dat) {
 					if (codelist.searchCheatData(dat, gameCode, crc32, cheatOffset, cheatSize)) {
@@ -781,13 +780,13 @@ int main(int argc, char **argv) {
 				remove(cheatDataBin);
 			}
 
-			const char* esrbSplashPath = isRunFromSd ? "sd:/_nds/nds-bootstrap/esrb.bin" : "fat:/_nds/nds-bootstrap/esrb.bin";
+			const char* esrbSplashPath = "/_nds/nds-bootstrap/esrb.bin";
 			if (access(esrbSplashPath, F_OK) == 0) {
 				// Remove ESRB splash screen generated by TWiLight Menu++
 				remove(esrbSplashPath);
 			}
 
-			const char* bootstrapIniPath = isRunFromSd ? "sd:/_nds/nds-bootstrap.ini" : "fat:/_nds/nds-bootstrap.ini";
+			const char* bootstrapIniPath = "/_nds/nds-bootstrap.ini";
 			CIniFile bootstrapini( bootstrapIniPath );
 
 			int donorSdkVer = 0;
