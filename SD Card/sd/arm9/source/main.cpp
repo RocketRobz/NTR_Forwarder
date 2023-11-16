@@ -10,9 +10,10 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "fatHeader.h"
 #include "ndsheaderbanner.h"
 #include "nds_loader_arm9.h"
-#include "nitrofs.h"
+// #include "nitrofs.h"
 #include "tonccpy.h"
 
 #include "cheat.h"
@@ -403,6 +404,93 @@ std::string ReplaceAll(std::string str, const std::string& from, const std::stri
     return str;
 }
 
+// From NTM
+// https://github.com/Epicpkmn11/NTM/blob/db69aca1b49733da51f64ee857ac9b861b1c468c/arm9/src/sav.c#L7-L93
+bool createDSiWareSave(const char *path, int size) {
+	const u16 sectorSize = 0x200;
+
+	if (!path || size < sectorSize)
+		return false;
+
+	//fit maximum sectors for the size
+	const u16 maxSectors = size / sectorSize;
+	u16 sectorCount = 1;
+	u16 secPerTrk = 1;
+	u16 numHeads = 1;
+	u16 sectorCountNext = 0;
+	while (sectorCountNext <= maxSectors) {
+		sectorCountNext = secPerTrk * (numHeads + 1) * (numHeads + 1);
+		if (sectorCountNext <= maxSectors) {
+			numHeads++;
+			sectorCount = sectorCountNext;
+
+			secPerTrk++;
+			sectorCountNext = secPerTrk * numHeads * numHeads;
+			if (sectorCountNext <= maxSectors) {
+				sectorCount = sectorCountNext;
+			}
+		}
+	}
+	sectorCountNext = (secPerTrk + 1) * numHeads * numHeads;
+	if (sectorCountNext <= maxSectors) {
+		secPerTrk++;
+		sectorCount = sectorCountNext;
+	}
+
+	u8 secPerCluster = (sectorCount > (8 << 10)) ? 8 : (sectorCount > (1 << 10) ? 4 : 1);
+
+	u16 rootEntryCount = size < 0x8C000 ? 0x20 : 0x200;
+
+	#define ALIGN_TO_MULTIPLE(v, a) (((v) % (a)) ? ((v) + (a) - ((v) % (a))) : (v))
+	u16 totalClusters = ALIGN_TO_MULTIPLE(sectorCount, secPerCluster) / secPerCluster;
+	u32 fatBytes = (ALIGN_TO_MULTIPLE(totalClusters, 2) / 2) * 3; // 2 sectors -> 3 byte
+	u16 fatSize = ALIGN_TO_MULTIPLE(fatBytes, sectorSize) / sectorSize;
+
+
+	FATHeader h;
+	toncset(&h, 0, sizeof(FATHeader));
+
+	h.BS_JmpBoot[0] = 0xE9;
+	h.BS_JmpBoot[1] = 0;
+	h.BS_JmpBoot[2] = 0;
+
+	tonccpy(h.BS_OEMName, "MSWIN4.1", 8);
+
+	h.BPB_BytesPerSec = sectorSize;
+	h.BPB_SecPerClus = secPerCluster;
+	h.BPB_RsvdSecCnt = 0x0001;
+	h.BPB_NumFATs = 0x02;
+	h.BPB_RootEntCnt = rootEntryCount;
+	h.BPB_TotSec16 = sectorCount;
+	h.BPB_Media = 0xF8; // "hard drive"
+	h.BPB_FATSz16 = fatSize;
+	h.BPB_SecPerTrk = secPerTrk;
+	h.BPB_NumHeads = numHeads;
+	h.BS_DrvNum = 0x05;
+	h.BS_BootSig = 0x29;
+	h.BS_VolID = 0x12345678;
+	tonccpy(h.BS_VolLab, "VOLUMELABEL", 11);
+	tonccpy(h.BS_FilSysType,"FAT12   ", 8);
+	h.BS_BootSign = 0xAA55;
+
+	FILE *file = fopen(path, "wb");
+	if (file) {
+		fwrite(&h, sizeof(FATHeader), 1, file); // Write header
+		int i = 0;
+		while (1) {
+			i += 0x8000;
+			if (i > size) i = size;
+			fseek(file, i - 1, SEEK_SET); // Pad rest of the file
+			fputc('\0', file);
+			if (i == size) break;
+		}
+		fclose(file);
+		return true;
+	}
+
+	return false;
+}
+
 
 std::string ndsPath;
 std::string romfolder;
@@ -441,7 +529,7 @@ int main(int argc, char **argv) {
 				iprintf("with the correct ROM path.\n");
 			}
 		} else {
-		nitroFSInit(argv[0]);
+		// nitroFSInit(argv[0]);
 		const bool isRunFromSd = (strncmp(argv[0], "sd", 2) == 0);
 
 		CIniFile ntrforwarderini( isRunFromSd ? "sd:/_nds/ntr_forwarder.ini" : "fat:/_nds/ntr_forwarder.ini" );
@@ -561,27 +649,8 @@ int main(int argc, char **argv) {
 				if (isRunFromSd) {
 					if ((getFileSize(dsiWarePubPath.c_str()) == 0) && (ndsHeader.pubSavSize > 0)) {
 						consoleDemoInit();
-						iprintf("Creating public save file...\n");
-						iprintf ("\n");
-
-						static const int BUFFER_SIZE = 4096;
-						char buffer[BUFFER_SIZE];
-						toncset(buffer, 0, sizeof(buffer));
-						char savHdrPath[64];
-						snprintf(savHdrPath, sizeof(savHdrPath), "nitro:/DSiWareSaveHeaders/%x.savhdr",
-							 (unsigned int)ndsHeader.pubSavSize);
-						FILE *hdrFile = fopen(savHdrPath, "rb");
-						if (hdrFile)
-							fread(buffer, 1, 0x200, hdrFile);
-						fclose(hdrFile);
-
-						FILE *pFile = fopen(dsiWarePubPath.c_str(), "wb");
-						if (pFile) {
-							fwrite(buffer, 1, sizeof(buffer), pFile);
-							fseek(pFile, ndsHeader.pubSavSize - 1, SEEK_SET);
-							fputc('\0', pFile);
-							fclose(pFile);
-						}
+						iprintf("Creating public save file...\n\n");
+						createDSiWareSave(dsiWarePubPath.c_str(), ndsHeader.pubSavSize);
 						iprintf("Public save file created!\n");
 
 						for (int i = 0; i < 30; i++) {
@@ -591,27 +660,8 @@ int main(int argc, char **argv) {
 
 					if ((getFileSize(dsiWarePrvPath.c_str()) == 0) && (ndsHeader.prvSavSize > 0)) {
 						consoleDemoInit();
-						iprintf("Creating private save file...\n");
-						iprintf ("\n");
-
-						static const int BUFFER_SIZE = 4096;
-						char buffer[BUFFER_SIZE];
-						toncset(buffer, 0, sizeof(buffer));
-						char savHdrPath[64];
-						snprintf(savHdrPath, sizeof(savHdrPath), "nitro:/DSiWareSaveHeaders/%x.savhdr",
-							 (unsigned int)ndsHeader.prvSavSize);
-						FILE *hdrFile = fopen(savHdrPath, "rb");
-						if (hdrFile)
-							fread(buffer, 1, 0x200, hdrFile);
-						fclose(hdrFile);
-
-						FILE *pFile = fopen(dsiWarePrvPath.c_str(), "wb");
-						if (pFile) {
-							fwrite(buffer, 1, sizeof(buffer), pFile);
-							fseek(pFile, ndsHeader.prvSavSize - 1, SEEK_SET);
-							fputc('\0', pFile);
-							fclose(pFile);
-						}
+						iprintf("Creating private save file...\n\n");
+						createDSiWareSave(dsiWarePrvPath.c_str(), ndsHeader.prvSavSize);
 						iprintf("Private save file created!\n");
 
 						for (int i = 0; i < 30; i++) {
@@ -622,8 +672,7 @@ int main(int argc, char **argv) {
 					const u32 savesize = ((ndsHeader.pubSavSize > 0) ? ndsHeader.pubSavSize : ndsHeader.prvSavSize);
 					if ((getFileSize(savepath.c_str()) == 0) && (savesize > 0)) {
 						consoleDemoInit();
-						iprintf("Creating save file...\n");
-						iprintf ("\n");
+						iprintf("Creating save file...\n\n");
 
 						FILE *pFile = fopen(savepath.c_str(), "wb");
 						if (pFile) {
@@ -631,7 +680,7 @@ int main(int argc, char **argv) {
 							fputc('\0', pFile);
 							fclose(pFile);
 						}
-						iprintf ("Done!\n");
+						iprintf("Done!\n");
 
 						for (int i = 0; i < 30; i++) {
 							swiWaitForVBlank();
@@ -655,8 +704,8 @@ int main(int argc, char **argv) {
 
 				if ((orgsavesize == 0 && savesize > 0) || (orgsavesize < savesize)) {
 					consoleDemoInit();
-					iprintf ((orgsavesize == 0) ? "Creating save file...\n" : "Expanding save file...\n");
-					iprintf ("\n");
+					iprintf((orgsavesize == 0) ? "Creat" : "Expand");
+					iprintf("ing save file...\n\n");
 
 					FILE *pFile = fopen(savepath.c_str(), orgsavesize > 0 ? "r+" : "wb");
 					if (pFile) {
@@ -664,7 +713,7 @@ int main(int argc, char **argv) {
 						fputc('\0', pFile);
 						fclose(pFile);
 					}
-					iprintf ("Done!\n");
+					iprintf("Done!\n");
 
 					for (int i = 0; i < 30; i++) {
 						swiWaitForVBlank();
