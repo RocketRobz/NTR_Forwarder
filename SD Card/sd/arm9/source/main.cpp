@@ -692,7 +692,7 @@ int main(int argc, char **argv) {
 				u32 savesize = 524288; // 512KB (default size for most games)
 
 				u32 gameTidHex = 0;
-				tonccpy(&gameTidHex, &ndsHeader.gameCode, 4);
+				tonccpy(&gameTidHex, ndsHeader.gameCode, 4);
 
 				for (int i = 0; i < (int)sizeof(ROMList)/12; i++) {
 					ROMListEntry* curentry = &ROMList[i];
