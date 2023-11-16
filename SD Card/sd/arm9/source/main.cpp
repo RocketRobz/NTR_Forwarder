@@ -826,6 +826,7 @@ int main(int argc, char **argv) {
 			// Fix weird bug where some settings would get cleared
 			cacheFatTable = bootstrapini.GetInt("NDS-BOOTSTRAP", "CACHE_FAT_TABLE", cacheFatTable);
 
+			const bool ubongo = (memcmp(ndsHeader.gameCode, "KUB", 3) == 0);
 			int requiresDonorRom = 0;
 			bool dsDebugRam = false;
 			if (!isDSiMode()) {
@@ -859,7 +860,7 @@ int main(int argc, char **argv) {
 					donorRomPath = bootstrapini.GetString("NDS-BOOTSTRAP", pathDefine, "");
 					donorRomFound = (donorRomPath != "" && access(donorRomPath.c_str(), F_OK) == 0);
 				}
-				if (!donorRomFound && !isDSiMode() && requiresDonorRom != 20 && memcmp(ndsHeader.gameCode, "KUB", 3) != 0) {
+				if (!donorRomFound && !isDSiMode() && requiresDonorRom != 20 && !ubongo) {
 					pathDefine = "DONOR5_NDS_PATH"; // SDK5.x (NTR)
 					donorRomPath = bootstrapini.GetString("NDS-BOOTSTRAP", pathDefine, "");
 					donorRomFound = (donorRomPath != "" && access(donorRomPath.c_str(), F_OK) == 0);
@@ -875,13 +876,18 @@ int main(int argc, char **argv) {
 					iprintf("launch this title!\n");
 					iprintf("\n");
 					iprintf("Please create a forwarder for\n");
-					iprintf("an SDK");
-					if (requiresDonorRom == 51) {
-						iprintf("5");
+					if (ubongo) {
+						iprintf("a DSi-Enhanced title,\n");
 					} else {
-						iprintf("2.0");
+						iprintf("an SDK");
+						if (requiresDonorRom == 51) {
+							iprintf("5");
+						} else {
+							iprintf("2.0");
+						}
+						iprintf(" title, ");
 					}
-					iprintf(" title, launch it,\n");
+					iprintf("launch it,\n");
 					iprintf("hold the Y button to open the\n");
 					iprintf("per-game settings, then select\n");
 					iprintf("\"Set as Donor ROM\"\n");
