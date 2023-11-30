@@ -116,10 +116,10 @@ std::string setApFix(const char *filename, const bool isRunFromSd) {
 	bool ipsFound = false;
 	bool cheatVer = true;
 	char ipsPath[256];
-	snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s.ips", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
+	snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s.ips", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
 	ipsFound = (access(ipsPath, F_OK) == 0);
 	if (!ipsFound) {
-		snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s.bin", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
+		snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s.bin", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
 		ipsFound = (access(ipsPath, F_OK) == 0);
 	} else {
 		cheatVer = false;
@@ -135,10 +135,10 @@ std::string setApFix(const char *filename, const bool isRunFromSd) {
 		fclose(f_nds_file);
 		game_TID[4] = 0;
 
-		snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s-%X.ips", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
+		snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s-%X.ips", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
 		ipsFound = (access(ipsPath, F_OK) == 0);
 		if (!ipsFound) {
-			snprintf(ipsPath, sizeof(ipsPath), "/_nds/%s/apfix/%s-%X.bin", (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
+			snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s-%X.bin", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
 			ipsFound = (access(ipsPath, F_OK) == 0);
 		} else {
 			cheatVer = false;
@@ -197,7 +197,7 @@ std::string setApFix(const char *filename, const bool isRunFromSd) {
 			fread(buffer, 1, size, file);
 
 			mkdir("/_nds/nds-bootstrap", 0777);
-			snprintf(ipsPath, sizeof(ipsPath), "/_nds/nds-bootstrap/apFix%s", cheatVer ? "Cheat.bin" : ".ips");
+			snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/nds-bootstrap/apFix%s", isRunFromSd ? "sd" : "fat", cheatVer ? "Cheat.bin" : ".ips");
 			FILE *out = fopen(ipsPath, "wb");
 			if(out) {
 				fwrite(buffer, 1, size, out);
