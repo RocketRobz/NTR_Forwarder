@@ -72,10 +72,10 @@ int main(int argc, char **argv) {
 		}
 	} else {
 		consoleDemoInit();
-		iprintf("fatinitDefault failed!");
+		iprintf("fatInitDefault failed!");
 	}
 
-	iprintf("\n");		
+	iprintf("\n\n");		
 	iprintf("Press B to return to\n");
 	iprintf("HOME Menu.\n");		
 
