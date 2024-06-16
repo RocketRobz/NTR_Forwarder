@@ -922,8 +922,9 @@ int main(int argc, char **argv) {
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "REGION", gameSettings.region == -3 ? region : gameSettings.region);
 			bootstrapini.SaveIniFile( bootstrapIniPath );
 
+			const bool perGameBootstrapFile = (gameSettings.bootstrapFile == -1 ? bootstrapFile : gameSettings.bootstrapFile);
 			if (isHomebrew == 1) {
-				const char *argarray[] = {bootstrapFile ? "sd:/_nds/nds-bootstrap-hb-nightly.nds" : "sd:/_nds/nds-bootstrap-hb-release.nds"};
+				const char *argarray[] = {perGameBootstrapFile ? "sd:/_nds/nds-bootstrap-hb-nightly.nds" : "sd:/_nds/nds-bootstrap-hb-release.nds"};
 				int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 				if (!consoleInited) {
 					consoleDemoInit();
@@ -933,7 +934,7 @@ int main(int argc, char **argv) {
 				iprintf("Start failed. Error %i\n", err);
 				if (err == 1) iprintf ("nds-bootstrap (hb) not found.\n");
 			} else {
-				const char *argarray[] = {isRunFromSd ? (bootstrapFile ? "sd:/_nds/nds-bootstrap-nightly.nds" : "sd:/_nds/nds-bootstrap-release.nds") : (bootstrapFile ? "fat:/_nds/nds-bootstrap-nightly.nds" : "fat:/_nds/nds-bootstrap-release.nds")};
+				const char *argarray[] = {isRunFromSd ? (perGameBootstrapFile ? "sd:/_nds/nds-bootstrap-nightly.nds" : "sd:/_nds/nds-bootstrap-release.nds") : (perGameBootstrapFile ? "fat:/_nds/nds-bootstrap-nightly.nds" : "fat:/_nds/nds-bootstrap-release.nds")};
 				int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 				if (!consoleInited) {
 					consoleDemoInit();
