@@ -109,7 +109,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 	int cursorPosition = 0;
 	int numOptions = consoleModel == 2 ? 9 : 8;
 	if (!isDSiMode()) {
-		numOptions = 3;
+		numOptions = 4;
 	}
 	const bool showSetDonorRom = isDonorRom(arm7size, ndsHeader.a7mbk6, SDKVersion);
 	if (showSetDonorRom) {
@@ -127,6 +127,8 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 			iprintf("  VRAM Mode: %s\n", vramLabels[boostVram + 1]);
 			iprintf("  Card Read DMA: %s\n", offOnLabels[cardReadDMA + 1]);
 			iprintf("  Async Card Read: %s\n", offOnLabels[asyncCardRead + 1]);
+		} else {
+			iprintf("  Card Read DMA: %s\n", offOnLabels[cardReadDMA + 1]);
 		}
 		iprintf("  Bootstrap File: %s\n", bootstrapLabels[bootstrapFile + 1]);
 		if(consoleModel == 2)
@@ -212,6 +214,10 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						if(saveNo < 0) saveNo = 9;
 						break;
 					case 3:
+						cardReadDMA--;
+						if(cardReadDMA < -1) cardReadDMA = 1;
+						break;
+					case 4:
 						bootstrapFile--;
 						if(bootstrapFile < -1) bootstrapFile = 1;
 						break;
@@ -276,6 +282,10 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						if(saveNo > 9) saveNo = 0;
 						break;
 					case 3:
+						cardReadDMA++;
+						if(cardReadDMA > 1) cardReadDMA = -1;
+						break;
+					case 4:
 						bootstrapFile++;
 						if(bootstrapFile > 1) bootstrapFile = -1;
 						break;
