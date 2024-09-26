@@ -93,6 +93,10 @@ int checkIfHomebrew(FILE* ndsFile, const bool isRunFromSd) {
 		if (arm9Sig[0][2] == 0xE1DC00B6 // SDK 3-5
 		 && arm9Sig[0][3] == 0xE3500000) {
 			return 0;
+		} else
+		if (arm9Sig[0][2] == 0xEAFFFFFF // SDK 4 (HM DS Cute)
+		 && arm9Sig[0][3] == 0xE1DC00B6) {
+			return 0;
 		}
 	} else if (strncmp(ndsHeader.gameCode, "HNA", 3) == 0) {
 		return 0;
