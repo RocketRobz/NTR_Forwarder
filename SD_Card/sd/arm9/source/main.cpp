@@ -104,116 +104,6 @@ int SetDonorSDK(const char* filename) {
 	return 0;
 }
 
-/**
- * Fix AP for some games.
- */
-std::string setApFix(const char *filename, const bool isRunFromSd) {
-	const bool useTwlmPath = (access("/_nds/TWiLightMenu/extras/apfix.pck", F_OK) == 0);
-
-	char game_TID[5];
-	u16 headerCRC16 = 0;
-
-	bool ipsFound = false;
-	bool cheatVer = true;
-	char ipsPath[256];
-	snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s.ips", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
-	ipsFound = (access(ipsPath, F_OK) == 0);
-	if (!ipsFound) {
-		snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s.bin", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), filename);
-		ipsFound = (access(ipsPath, F_OK) == 0);
-	} else {
-		cheatVer = false;
-	}
-
-	if (!ipsFound) {
-		FILE *f_nds_file = fopen(filename, "rb");
-
-		fseek(f_nds_file, offsetof(sNDSHeaderExt, gameCode), SEEK_SET);
-		fread(game_TID, 1, 4, f_nds_file);
-		fseek(f_nds_file, offsetof(sNDSHeaderExt, headerCRC16), SEEK_SET);
-		fread(&headerCRC16, sizeof(u16), 1, f_nds_file);
-		fclose(f_nds_file);
-		game_TID[4] = 0;
-
-		snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s-%X.ips", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
-		ipsFound = (access(ipsPath, F_OK) == 0);
-		if (!ipsFound) {
-			snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/%s/apfix/%s-%X.bin", (isRunFromSd ? "sd" : "fat"), (useTwlmPath ? "TWiLightMenu/extras" : "ntr-forwarder"), game_TID, headerCRC16);
-			ipsFound = (access(ipsPath, F_OK) == 0);
-		} else {
-			cheatVer = false;
-		}
-	}
-
-	if (ipsFound) {
-		return ipsPath;
-	}
-
-	FILE *file = fopen(useTwlmPath ? "/_nds/TWiLightMenu/extras/apfix.pck" : "/_nds/ntr-forwarder/apfix.pck", "rb");
-	if (file) {
-		char buf[5] = {0};
-		fread(buf, 1, 4, file);
-		if (strcmp(buf, ".PCK") != 0) // Invalid file
-			return "";
-
-		u32 fileCount;
-		fread(&fileCount, 1, sizeof(fileCount), file);
-
-		u32 offset = 0, size = 0;
-
-		// Try binary search for the game
-		int left = 0;
-		int right = fileCount;
-
-		while (left <= right) {
-			int mid = left + ((right - left) / 2);
-			fseek(file, 16 + mid * 16, SEEK_SET);
-			fread(buf, 1, 4, file);
-			int cmp = strcmp(buf,  game_TID);
-			if (cmp == 0) { // TID matches, check CRC
-				u16 crc;
-				fread(&crc, 1, sizeof(crc), file);
-
-				if (crc == headerCRC16) { // CRC matches
-					fread(&offset, 1, sizeof(offset), file);
-					fread(&size, 1, sizeof(size), file);
-					cheatVer = fgetc(file) & 1;
-					break;
-				} else if (crc < headerCRC16) {
-					left = mid + 1;
-				} else {
-					right = mid - 1;
-				}
-			} else if (cmp < 0) {
-				left = mid + 1;
-			} else {
-				right = mid - 1;
-			}
-		}
-
-		if (offset > 0 && size > 0) {
-			fseek(file, offset, SEEK_SET);
-			u8 *buffer = new u8[size];
-			fread(buffer, 1, size, file);
-
-			mkdir("/_nds/nds-bootstrap", 0777);
-			snprintf(ipsPath, sizeof(ipsPath), "%s:/_nds/nds-bootstrap/apFix%s", isRunFromSd ? "sd" : "fat", cheatVer ? "Cheat.bin" : ".ips");
-			FILE *out = fopen(ipsPath, "wb");
-			if(out) {
-				fwrite(buffer, 1, size, out);
-				fclose(out);
-			}
-			delete[] buffer;
-			fclose(file);
-			return ipsPath;
-		}
-
-		fclose(file);
-	}
-
-	return "";
-}
-
 void setAutoload(const char *resetTid) {
 	u8 *autoloadParams = (u8 *)0x02000300;
 
@@ -903,9 +793,6 @@ int main(int argc, char **argv) {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "PRV_PATH", sfnPrv);
 			} else {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", savepath);
-			}
-			if (isHomebrew == 0) {
-				bootstrapini.SetString("NDS-BOOTSTRAP", "AP_FIX_PATH", isDSiWare ? "" : setApFix(filename.c_str(), isRunFromSd));
 			}
 			bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_CPU", gameSettings.boostCpu);
