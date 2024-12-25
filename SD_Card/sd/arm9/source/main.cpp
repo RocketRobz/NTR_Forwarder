@@ -29,8 +29,9 @@ using namespace std;
 
 static int language = -1;
 static int region = -2;
-static bool cacheFatTable = false;
+static bool settingClearFix = false;
 
+static int saveLocation = 0; // 0 = "saves" folder, 1 = ROM folder, 2 = TWLM Folder
 static bool bootstrapFile = false;
 static bool widescreenLoaded = false;
 
@@ -388,6 +389,9 @@ std::string filename;
 std::string savename;
 std::string romFolderNoSlash;
 std::string savepath;
+std::string dsiWareSrlPath;
+std::string dsiWarePubPath;
+std::string dsiWarePrvPath;
 
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
@@ -424,8 +428,13 @@ int main(int argc, char **argv) {
 
 		CIniFile ntrforwarderini( isRunFromSd ? "sd:/_nds/ntr_forwarder.ini" : "fat:/_nds/ntr_forwarder.ini" );
 
+		saveLocation = ntrforwarderini.GetInt("NTR-FORWARDER", "SAVE_LOCATION", 0);
 		bootstrapFile = ntrforwarderini.GetInt("NTR-FORWARDER", "BOOTSTRAP_FILE", 0);
 		widescreenLoaded = ntrforwarderini.GetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", false);
+
+		if ((saveLocation == 2) && (access(isRunFromSd ? "sd:/_nds/TWiLightMenu" : "fat:/_nds/TWiLightMenu", F_OK) != 0)) {
+			saveLocation = 0; // Fallback to "saves" folder within the ROM location if the "TWiLightMenu" folder is not found
+		}
 
 		ndsPath = (std::string)argv[1];
 		/*consoleDemoInit();
@@ -454,9 +463,6 @@ int main(int argc, char **argv) {
 		FILE *f_nds_file = fopen(filename.c_str(), "rb");
 		bool dsiBinariesFound = (!isDSiMode()) || checkDsiBinaries(f_nds_file);
 		int isHomebrew = checkIfHomebrew(f_nds_file, isRunFromSd);
-		if (isHomebrew == 0) {
-			mkdir ("saves", 0777);
-		}
 
 		extern sNDSHeaderExt ndsHeader;
 
@@ -512,28 +518,35 @@ int main(int argc, char **argv) {
 			if(!widescreenLoaded)
 				remove("/_nds/nds-bootstrap/wideCheatData.bin");
 
-			const char *typeToReplace = ".nds";
-			if (extention(filename, ".dsi")) {
-				typeToReplace = ".dsi";
-			} else if (extention(filename, ".ids")) {
-				typeToReplace = ".ids";
-			} else if (extention(filename, ".srl")) {
-				typeToReplace = ".srl";
-			} else if (extention(filename, ".app")) {
-				typeToReplace = ".app";
+			if (isHomebrew == 0) {
+				std::string typeToReplace = filename.substr(filename.rfind('.'));
+
+				char savExtension[16] = ".sav";
+				char pubExtension[16] = ".pub";
+				char prvExtension[16] = ".prv";
+				if (gameSettings.saveNo > 0) {
+					snprintf(savExtension, sizeof(savExtension), ".sav%d", gameSettings.saveNo);
+					snprintf(pubExtension, sizeof(pubExtension), ".pu%d", gameSettings.saveNo);
+					snprintf(prvExtension, sizeof(prvExtension), ".pr%d", gameSettings.saveNo);
+				}
+				savename = ReplaceAll(filename, typeToReplace, savExtension);
+				romFolderNoSlash = romfolder;
+				RemoveTrailingSlashes(romFolderNoSlash);
+				savepath = romFolderNoSlash + "/saves/" + savename;
+				if (saveLocation == 2) {
+					std::string twlmSavesFolder = isRunFromSd ? "sd:/_nds/TWiLightMenu/saves" : "fat:/_nds/TWiLightMenu/saves";
+					mkdir(twlmSavesFolder.c_str(), 0777);
+					savepath = twlmSavesFolder + "/" + savename;
+				} else if (saveLocation == 1) {
+					savepath = romFolderNoSlash + "/" + savename;
+				} else {
+					mkdir("saves", 0777);
+				}
+
+				dsiWareSrlPath = ndsPath;
+				dsiWarePubPath = ReplaceAll(savepath, savExtension, pubExtension);
+				dsiWarePrvPath = ReplaceAll(savepath, savExtension, prvExtension);
 			}
-
-			char savExtension[16] = ".sav";
-			if(gameSettings.saveNo > 0)
-				snprintf(savExtension, sizeof(savExtension), ".sav%d", gameSettings.saveNo);
-			savename = ReplaceAll(filename, typeToReplace, savExtension);
-			romFolderNoSlash = romfolder;
-			RemoveTrailingSlashes(romFolderNoSlash);
-			savepath = romFolderNoSlash+"/saves/"+savename;
-
-			std::string dsiWareSrlPath = ndsPath;
-			std::string dsiWarePubPath = ReplaceAll(savepath, ".sav", ".pub");
-			std::string dsiWarePrvPath = ReplaceAll(savepath, ".sav", ".prv");
 
 			if (isDSiWare) {
 				if (isRunFromSd) {
@@ -714,7 +727,7 @@ int main(int argc, char **argv) {
 			}
 
 			// Fix weird bug where some settings would get cleared
-			cacheFatTable = bootstrapini.GetInt("NDS-BOOTSTRAP", "CACHE_FAT_TABLE", cacheFatTable);
+			settingClearFix = bootstrapini.GetInt("NDS-BOOTSTRAP", "CACHE_FAT_TABLE", settingClearFix);
 
 			const bool ubongo = (memcmp(ndsHeader.gameCode, "KUB", 3) == 0);
 			int requiresDonorRom = 0;
@@ -791,7 +804,7 @@ int main(int argc, char **argv) {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "APP_PATH", sfnSrl);
 				bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", sfnPub);
 				bootstrapini.SetString("NDS-BOOTSTRAP", "PRV_PATH", sfnPrv);
-			} else {
+			} else if (isHomebrew == 0) {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", savepath);
 			}
 			bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
@@ -800,7 +813,7 @@ int main(int argc, char **argv) {
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "CARD_READ_DMA", gameSettings.cardReadDMA);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "ASYNC_CARD_READ", gameSettings.asyncCardRead);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "DSI_MODE", dsModeForced ? 0 : (gameSettings.dsiMode == -1 ? true : gameSettings.dsiMode));
-			//bootstrapini.SetInt("NDS-BOOTSTRAP", "CACHE_FAT_TABLE", cacheFatTable);
+			//bootstrapini.SetInt("NDS-BOOTSTRAP", "CACHE_FAT_TABLE", settingClearFix);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "DONOR_SDK_VER", donorSdkVer);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "PATCH_MPU_REGION", 0);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "PATCH_MPU_SIZE", 0);
