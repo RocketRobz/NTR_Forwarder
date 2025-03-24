@@ -399,12 +399,10 @@ int main(int argc, char **argv) {
 
 	defaultExceptionHandler();
 
-	keysSetRepeat(25, 5);
+	scanKeys();
+	const bool openPerGameSettings = (keysHeld() & KEY_Y);
 
 	if (isDSiMode()) {
-		// Cut slot1 power to save battery
-		disableSlot1();
-
 		*(vu32*)0x0DFFFE0C = 0x4652544E; // Check for Debug RAM
 		if (*(vu32*)0x0DFFFE0C == 0x4652544E) {
 			consoleModel = fifoGetValue32(FIFO_USER_05) == 0xD2 ? 1 : 2; // 1: Panda DSi, 2: 3DS/2DS
@@ -412,6 +410,13 @@ int main(int argc, char **argv) {
 	}
 
 	if (fatInitDefault()) {
+		keysSetRepeat(25, 5);
+
+		if (isDSiMode()) {
+			// Cut slot1 power to save battery
+			disableSlot1();
+		}
+
 		if (argc < 2 || access(argv[1], F_OK) != 0) {
 			consoleDemoInit();
 			if (argc < 2) {
@@ -468,10 +473,8 @@ int main(int argc, char **argv) {
 
 		const bool isDSiWare = (ndsHeader.unitCode != 0 && (ndsHeader.accessControl & BIT(4))); // Check if it's a DSiWare game
 
-		swiWaitForVBlank();
 		GameSettings gameSettings(filename, ndsPath);
-		scanKeys();
-		if(keysHeld() & KEY_Y) {
+		if (openPerGameSettings) {
 			gameSettings.menu(f_nds_file, filename, (bool)isHomebrew);
 		}
 
@@ -852,7 +855,7 @@ int main(int argc, char **argv) {
 		vramSetBankH(VRAM_H_SUB_BG);
 		consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 15, 0, false, true);	
 
-		iprintf ("fatinitDefault failed!\n");
+		iprintf ("fatInitDefault failed!\n");
 	}
 
 error:
