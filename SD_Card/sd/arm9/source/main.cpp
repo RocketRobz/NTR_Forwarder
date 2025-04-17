@@ -406,7 +406,17 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (fatInitDefault()) {
+	bool fatInited = false;
+
+	while (1) {
+		static int loopTimes = 0;
+		fatInited = fatInitDefault();
+		swiWaitForVBlank();
+		loopTimes++;
+		if (fatInited || loopTimes == 5) break;
+	}
+
+	if (fatInited) {
 		keysSetRepeat(25, 5);
 
 		if (isDSiMode()) {
