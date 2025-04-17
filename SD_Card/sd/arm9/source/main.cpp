@@ -399,9 +399,6 @@ int main(int argc, char **argv) {
 
 	defaultExceptionHandler();
 
-	scanKeys();
-	const bool openPerGameSettings = (keysHeld() & KEY_Y);
-
 	if (isDSiMode()) {
 		*(vu32*)0x0DFFFE0C = 0x4652544E; // Check for Debug RAM
 		if (*(vu32*)0x0DFFFE0C == 0x4652544E) {
@@ -472,6 +469,10 @@ int main(int argc, char **argv) {
 		extern sNDSHeaderExt ndsHeader;
 
 		const bool isDSiWare = (ndsHeader.unitCode != 0 && (ndsHeader.accessControl & BIT(4))); // Check if it's a DSiWare game
+
+		scanKeys();
+		swiWaitForVBlank();
+		const bool openPerGameSettings = (keysHeld() & KEY_Y);
 
 		GameSettings gameSettings(filename, ndsPath);
 		if (openPerGameSettings) {
