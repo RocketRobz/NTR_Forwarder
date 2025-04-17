@@ -411,9 +411,9 @@ int main(int argc, char **argv) {
 	while (1) {
 		static int loopTimes = 0;
 		fatInited = fatInitDefault();
-		swiWaitForVBlank();
 		loopTimes++;
 		if (fatInited || loopTimes == 5) break;
+		swiWaitForVBlank();
 	}
 
 	if (fatInited) {
