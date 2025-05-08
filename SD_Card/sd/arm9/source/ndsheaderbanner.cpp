@@ -83,7 +83,7 @@ int checkIfHomebrew(FILE* ndsFile, const bool isRunFromSd) {
 
 	fseek(ndsFile, ndsHeader.arm9romOffset + ndsHeader.arm9executeAddress - ndsHeader.arm9destination, SEEK_SET);
 	fread(arm9Sig[0], sizeof(u32), 4, ndsFile);
-	if ((arm9Sig[0][0] == 0xE3A0C301 || (arm9Sig[0][0] >= 0xEA000000 && arm9Sig[0][0] < 0xEB000000 /* If title contains cracktro or extra splash */))
+	if ((arm9Sig[0][0] == 0xE3A0C301 || (arm9Sig[0][0] >= 0xEA000000 && arm9Sig[0][0] < 0xEC000000 /* If title contains cracktro or extra splash */))
 	  && arm9Sig[0][1] == 0xE58CC208) {
 		// Title seems to be developed with Nintendo SDK, verify
 		if ((arm9Sig[0][2] >= 0xEB000000 && arm9Sig[0][2] < 0xEC000000) // SDK 2 & TWL SDK 5
