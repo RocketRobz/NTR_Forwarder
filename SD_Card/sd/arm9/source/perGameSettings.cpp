@@ -27,6 +27,7 @@ GameSettings::GameSettings(const std::string &fileName, const std::string &fileP
 	boostVram = ini.GetInt("GAMESETTINGS", "BOOST_VRAM", boostVram);
 	cardReadDMA = ini.GetInt("GAMESETTINGS", "CARD_READ_DMA", cardReadDMA);
 	asyncCardRead = ini.GetInt("GAMESETTINGS", "ASYNC_CARD_READ", asyncCardRead);
+	phatColors = ini.GetInt("GAMESETTINGS", "PHAT_COLORS", phatColors);
 	bootstrapFile = ini.GetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
 	widescreen = ini.GetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
 }
@@ -40,6 +41,7 @@ void GameSettings::save() {
 	ini.SetInt("GAMESETTINGS", "BOOST_VRAM", boostVram);
 	ini.SetInt("GAMESETTINGS", "CARD_READ_DMA", cardReadDMA);
 	ini.SetInt("GAMESETTINGS", "ASYNC_CARD_READ", asyncCardRead);
+	ini.SetInt("GAMESETTINGS", "PHAT_COLORS", phatColors);
 	ini.SetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
 	ini.SetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
 
@@ -107,7 +109,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 
 	u16 held;
 	int cursorPosition = 0;
-	int numOptions = consoleModel == 2 ? 9 : 8;
+	int numOptions = consoleModel == 2 ? 10 : 9;
 	if (!isDSiMode()) {
 		numOptions = 4;
 	}
@@ -127,6 +129,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 			iprintf("  VRAM Mode: %s\n", vramLabels[boostVram + 1]);
 			iprintf("  Card Read DMA: %s\n", offOnLabels[cardReadDMA + 1]);
 			iprintf("  Async Card Read: %s\n", offOnLabels[asyncCardRead + 1]);
+			iprintf("  DS Phat Colors: %s\n", offOnLabels[phatColors + 1]);
 		} else {
 			iprintf("  Card Read DMA: %s\n", offOnLabels[cardReadDMA + 1]);
 		}
@@ -191,10 +194,14 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						if(asyncCardRead < -1) asyncCardRead = 1;
 						break;
 					case 8:
+						phatColors--;
+						if(phatColors < -1) phatColors = 1;
+						break;
+					case 9:
 						bootstrapFile--;
 						if(bootstrapFile < -1) bootstrapFile = 1;
 						break;
-					case 9:
+					case 10:
 						widescreen--;
 						if(widescreen < -1) widescreen = 2;
 						break;
@@ -259,10 +266,14 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						if(asyncCardRead > 1) asyncCardRead = -1;
 						break;
 					case 8:
+						phatColors++;
+						if(phatColors > 1) phatColors = -1;
+						break;
+					case 9:
 						bootstrapFile++;
 						if(bootstrapFile > 1) bootstrapFile = -1;
 						break;
-					case 9:
+					case 10:
 						widescreen++;
 						if(widescreen > 2) widescreen = -1;
 						break;
