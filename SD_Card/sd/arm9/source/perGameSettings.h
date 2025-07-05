@@ -22,6 +22,7 @@ public:
 	int cardReadDMA = -1;
 	int asyncCardRead = -1;
 	int phatColors = -1;
+	int saveRelocation = -1;
 	int bootstrapFile = -1;
 	int widescreen = -1;
 
