@@ -15,6 +15,7 @@ constexpr std::array<const char *, 4> runInLabels = {"Default", "DS Mode", "Auto
 constexpr std::array<const char *, 3> cpuLabels = {"Default", "67 MHz (NTR)", "133 MHz (TWL)"};
 constexpr std::array<const char *, 3> vramLabels = {"Default", "DS Mode", "DSi Mode"};
 constexpr std::array<const char *, 4> expandLabels = {"Default", "No", "Yes", "Yes+512 KB"};
+constexpr std::array<const char *, 3> saveRelocationLabels = {"Default", "SD Card", "Game Card"};
 constexpr std::array<const char *, 3> bootstrapLabels = {"Default", "Release", "Nightly"};
 constexpr std::array<const char *, 4> widescreenLabels = {"Default", "Off", "On", "Forced"};
 
@@ -28,6 +29,7 @@ GameSettings::GameSettings(const std::string &fileName, const std::string &fileP
 	cardReadDMA = ini.GetInt("GAMESETTINGS", "CARD_READ_DMA", cardReadDMA);
 	asyncCardRead = ini.GetInt("GAMESETTINGS", "ASYNC_CARD_READ", asyncCardRead);
 	phatColors = ini.GetInt("GAMESETTINGS", "PHAT_COLORS", phatColors);
+	saveRelocation = ini.GetInt("GAMESETTINGS", "SAVE_RELOCATION", saveRelocation);
 	bootstrapFile = ini.GetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
 	widescreen = ini.GetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
 }
@@ -42,6 +44,7 @@ void GameSettings::save() {
 	ini.SetInt("GAMESETTINGS", "CARD_READ_DMA", cardReadDMA);
 	ini.SetInt("GAMESETTINGS", "ASYNC_CARD_READ", asyncCardRead);
 	ini.SetInt("GAMESETTINGS", "PHAT_COLORS", phatColors);
+	ini.SetInt("GAMESETTINGS", "SAVE_RELOCATION", saveRelocation);
 	ini.SetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
 	ini.SetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
 
@@ -109,7 +112,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 
 	u16 held;
 	int cursorPosition = 0;
-	int numOptions = consoleModel == 2 ? 10 : 9;
+	int numOptions = consoleModel == 2 ? 11 : 10;
 	if (!isDSiMode()) {
 		numOptions = 3;
 	}
@@ -130,6 +133,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 			iprintf("  Card Read DMA: %s\n", offOnLabels[cardReadDMA + 1]);
 			iprintf("  Async Card Read: %s\n", offOnLabels[asyncCardRead + 1]);
 			iprintf("  DS Phat Colors: %s\n", offOnLabels[phatColors + 1]);
+			iprintf("  Save Relocation: %s\n", saveRelocationLabels[saveRelocation == -1 ? 0 : (saveRelocation == 0 ? 2 : 1)]);
 		}
 		iprintf("  Bootstrap File: %s\n", bootstrapLabels[bootstrapFile + 1]);
 		if(consoleModel == 2)
@@ -196,10 +200,14 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						if(phatColors < -1) phatColors = 1;
 						break;
 					case 9:
+						saveRelocation++;
+						if(saveRelocation > 1) saveRelocation = -1;
+						break;
+					case 10:
 						bootstrapFile--;
 						if(bootstrapFile < -1) bootstrapFile = 1;
 						break;
-					case 10:
+					case 11:
 						widescreen--;
 						if(widescreen < -1) widescreen = 2;
 						break;
@@ -264,10 +272,14 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						if(phatColors > 1) phatColors = -1;
 						break;
 					case 9:
+						saveRelocation--;
+						if(saveRelocation < -1) saveRelocation = 1;
+						break;
+					case 10:
 						bootstrapFile++;
 						if(bootstrapFile > 1) bootstrapFile = -1;
 						break;
-					case 10:
+					case 11:
 						widescreen++;
 						if(widescreen > 2) widescreen = -1;
 						break;
