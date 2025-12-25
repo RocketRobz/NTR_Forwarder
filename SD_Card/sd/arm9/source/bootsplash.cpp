@@ -18,7 +18,7 @@ extern int screenBrightness;
 
 bool cartInserted;
 
-void bootSplashDSi(void) {
+void bootSplashDSi(const bool hsMsg) {
 	// u16 whiteCol = ((whiteCol>>10)&0x1f) | ((whiteCol)&((31-3*ms().blfLevel)<<5)) | (whiteCol&(31-6*ms().blfLevel))<<10 | BIT(15);
 	// toncset16(BG_GFX, 0xFFFF, 256*256);
 	// toncset16(BG_GFX_SUB, 0xFFFF, 256*256);
@@ -39,7 +39,7 @@ void bootSplashDSi(void) {
 	Gif splash(path, true, true);
 
 	path[0] = '\0';
-	sprintf(path, "nitro:/video/tttstc/%i.gif", language);
+	sprintf(path, "nitro:/video/%s/%i.gif", hsMsg ? "hsmsg" : "tttstc", language);
 	Gif healthSafety(path, false, true);
 
 	// Draw first frame, then wait until the top is done
@@ -159,7 +159,7 @@ void bootSplashDSi(void) {
 	timerStop(0);
 }
 
-void bootSplashInit(void) {
+void bootSplashInit(const bool hsMsg) {
 	videoSetMode(MODE_5_2D);
 	videoSetModeSub(MODE_5_2D);
 	vramSetBankA(VRAM_A_MAIN_BG);
@@ -175,5 +175,5 @@ void bootSplashInit(void) {
 	oamInit(&oamMain, SpriteMapping_Bmp_1D_128, false);
 
 	snd();
-	bootSplashDSi();
+	bootSplashDSi(hsMsg);
 }

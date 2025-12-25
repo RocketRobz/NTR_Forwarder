@@ -23,8 +23,8 @@
 extern "C" {
 #endif
 
-void bootSplashDSi (void);
-void bootSplashInit (void);
+void bootSplashDSi (const bool hsMsg);
+void bootSplashInit (const bool hsMsg);
 
 #ifdef __cplusplus
 }

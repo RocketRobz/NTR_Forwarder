@@ -490,10 +490,10 @@ int main(int argc, char **argv) {
 		widescreenLoaded = ntrforwarderini.GetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", false);
 
 		if (!widescreenLoaded) {
-			const bool runSplash = ntrforwarderini.GetInt("NTR-FORWARDER", "DSI_SPLASH", 1);
+			const int runSplash = ntrforwarderini.GetInt("NTR-FORWARDER", "DSI_SPLASH", 1);
 			if (nitroFSInit(argv[0]) && runSplash) {
 				runGraphicIrq();
-				bootSplashInit();
+				bootSplashInit(runSplash == 2);
 			}
 		}
 
