@@ -821,6 +821,8 @@ int main(int argc, char **argv) {
 			} else if (isHomebrew == 0) {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", savepath);
 			}
+			bootstrapini.SetString("NDS-BOOTSTRAP", "DONORTWLONLY0_NDS_PATH", "");
+			bootstrapini.SetString("NDS-BOOTSTRAP", "DONORTWLONLY_NDS_PATH", ""); // Clear TWL donor ROM path to work around white screen lockup in nds-bootstrap when running DSi-Enhanced/Exclusive ROMs
 			bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_CPU", gameSettings.boostCpu);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_VRAM", gameSettings.boostVram == -1 ? false : gameSettings.boostVram);
