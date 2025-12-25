@@ -58,7 +58,7 @@ void bootSplashDSi(void) {
 
 		std::vector<unsigned char> image;
 		unsigned int width, height;
-		lodepng::decode(image, width, height, "nitro:/graphics/nintendo.png");
+		lodepng::decode(image, width, height, "nitro:/video/splash/nintendo.png");
 
 		for (unsigned int i = 0, y = 0, x = 0;i < image.size() / 4; i++, x++) {
 			/* if (image[(i * 4) + 3] > 0) {
