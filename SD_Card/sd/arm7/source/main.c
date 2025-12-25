@@ -64,6 +64,8 @@ int main() {
 	REG_SCFG_EXT = 0x93FFFB06;
 	*(vu16*)(0x04004012) = 0x1988;
 	*(vu16*)(0x04004014) = 0x264C;
+	*(vu32*)0x400481C = 0;				// Clear SD IRQ stat register
+	*(vu32*)0x4004820 = 0;				// Clear SD IRQ mask register
 	*(vu16*)(0x04004C02) = 0x4000;	// enable powerbutton irq (Fix for Unlaunch 1.3)
 
 	// clear sound registers
