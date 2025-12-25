@@ -13,12 +13,13 @@
 #include "fatHeader.h"
 #include "ndsheaderbanner.h"
 #include "nds_loader_arm9.h"
-// #include "nitrofs.h"
+#include "nitrofs.h"
 #include "tonccpy.h"
 
 #include "cheat.h"
 #include "inifile.h"
 #include "fileCopy.h"
+#include "bootsplash.h"
 #include "perGameSettings.h"
 
 #include "donorMap.h"
@@ -26,6 +27,26 @@
 #include "ROMList.h"
 
 using namespace std;
+
+bool useTwlCfg = false;
+
+// Ported from PAlib (obsolete)
+static void SetBrightness(u8 screen, s8 bright) {
+	u16 mode = 1 << 14;
+
+	if (bright < 0) {
+		mode = 2 << 14;
+		bright = -bright;
+	}
+	if (bright > 31)
+		bright = 31;
+	*(vu16 *)(0x0400006C + (0x1000 * screen)) = bright + mode;
+}
+
+bool fadeType = false; // false = out, true = in
+bool controlTopBright = true;
+bool controlBottomBright = true;
+int screenBrightness = 31;
 
 static int language = -1;
 static int region = -2;
@@ -181,6 +202,7 @@ void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid, 
 	if (wideCheatFound) {
 		if (fcopy(wideBinPath, wideCheatDataPath) != 0) {
 			remove(wideCheatDataPath);
+			fadeType = true;
 			consoleDemoInit();
 			iprintf("Failed to copy widescreen\ncode for the game.");
 			for (int i = 0; i < 60 * 3; i++) {
@@ -276,6 +298,7 @@ void UnsetWidescreen() {
 	if(useTwlmPath)
 		mkdir("sd:/_nds/TWiLightMenu/TwlBg", 0777);
 	if (rename("sd:/luma/sysmodules/TwlBg.cxi", (useTwlmPath ? "sd:/_nds/TWiLightMenu/TwlBg/Widescreen.cxi" : "sd:/_nds/ntr-forwarder/Widescreen.cxi")) != 0) {
+		fadeType = true;
 		consoleDemoInit();
 		iprintf("Failed to rename TwlBg.cxi\n");
 		iprintf("back to Widescreen.cxi\n");
@@ -382,6 +405,26 @@ bool createDSiWareSave(const char *path, int size) {
 	return false;
 }
 
+void vBlankHandler() {
+	if (fadeType) {
+		screenBrightness--;
+		if (screenBrightness < 0) screenBrightness = 0;
+	} else {
+		screenBrightness++;
+		if (screenBrightness > 31) screenBrightness = 31;
+	}
+	if (controlTopBright) SetBrightness(0, screenBrightness);
+	if (controlBottomBright) SetBrightness(1, screenBrightness);
+}
+
+void runGraphicIrq(void) {
+	SetBrightness(0, 31);
+	SetBrightness(1, 31);
+
+	irqSet(IRQ_VBLANK, vBlankHandler);
+	irqEnable(IRQ_VBLANK);
+}
+
 
 std::string ndsPath;
 std::string romfolder;
@@ -417,6 +460,8 @@ int main(int argc, char **argv) {
 	}
 
 	if (fatInited) {
+		useTwlCfg = (isDSiMode() && (*(u8*)0x02000400 != 0) && (*(u8*)0x02000401 == 0) && (*(u8*)0x02000402 == 0) && (*(u8*)0x02000404 == 0) && (*(u8*)0x02000448 != 0));
+
 		keysSetRepeat(25, 5);
 
 		if (isDSiMode()) {
@@ -443,6 +488,14 @@ int main(int argc, char **argv) {
 		saveLocation = ntrforwarderini.GetInt("NTR-FORWARDER", "SAVE_LOCATION", 0);
 		bootstrapFile = ntrforwarderini.GetInt("NTR-FORWARDER", "BOOTSTRAP_FILE", 0);
 		widescreenLoaded = ntrforwarderini.GetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", false);
+
+		if (!widescreenLoaded) {
+			const bool runSplash = ntrforwarderini.GetInt("NTR-FORWARDER", "DSI_SPLASH", 1);
+			if (nitroFSInit(argv[0]) && runSplash) {
+				runGraphicIrq();
+				bootSplashInit();
+			}
+		}
 
 		if ((saveLocation == 2) && (access(isRunFromSd ? "sd:/_nds/TWiLightMenu" : "fat:/_nds/TWiLightMenu", F_OK) != 0)) {
 			saveLocation = 0; // Fallback to "saves" folder within the ROM location if the "TWiLightMenu" folder is not found
@@ -495,10 +548,10 @@ int main(int argc, char **argv) {
 			const char *argarray[] = {argv[1]};
 			int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 			if (!consoleInited) {
+				fadeType = true;
 				consoleDemoInit();
 				consoleInited = true;
 			}
-			consoleDemoInit();
 			iprintf("Start failed. Error %i\n", err);
 			if (err == 1) iprintf ("ROM not found.\n");
 		} else {
@@ -565,6 +618,7 @@ int main(int argc, char **argv) {
 			if (isDSiWare) {
 				if (isRunFromSd) {
 					if ((getFileSize(dsiWarePubPath.c_str()) == 0) && (ndsHeader.pubSavSize > 0)) {
+						fadeType = true;
 						consoleDemoInit();
 						iprintf("Creating public save file...\n\n");
 						createDSiWareSave(dsiWarePubPath.c_str(), ndsHeader.pubSavSize);
@@ -576,6 +630,7 @@ int main(int argc, char **argv) {
 					}
 
 					if ((getFileSize(dsiWarePrvPath.c_str()) == 0) && (ndsHeader.prvSavSize > 0)) {
+						fadeType = true;
 						consoleDemoInit();
 						iprintf("Creating private save file...\n\n");
 						createDSiWareSave(dsiWarePrvPath.c_str(), ndsHeader.prvSavSize);
@@ -588,6 +643,7 @@ int main(int argc, char **argv) {
 				} else {
 					const u32 savesize = ((ndsHeader.pubSavSize > 0) ? ndsHeader.pubSavSize : ndsHeader.prvSavSize);
 					if ((getFileSize(savepath.c_str()) == 0) && (savesize > 0)) {
+						fadeType = true;
 						consoleDemoInit();
 						iprintf("Creating save file...\n\n");
 
@@ -620,6 +676,7 @@ int main(int argc, char **argv) {
 				}
 
 				if ((orgsavesize == 0 && savesize > 0) || (orgsavesize < savesize)) {
+					fadeType = true;
 					consoleDemoInit();
 					iprintf((orgsavesize == 0) ? "Creat" : "Expand");
 					iprintf("ing save file...\n\n");
@@ -645,6 +702,7 @@ int main(int argc, char **argv) {
 				} else if(argc >= 3) {
 					SetWidescreen(ndsPath.c_str(), isHomebrew, argv[2], gameSettings.widescreen == 2);
 				} else {
+					fadeType = true;
 					consoleDemoInit();
 					iprintf("If using a 3DS-mode forwarder,\n");
 					iprintf("reinstall bootstrap.cia to use\n");
@@ -710,6 +768,7 @@ int main(int argc, char **argv) {
 			bool dsModeForced = false;
 
 			if (isHomebrew == 0 && ndsHeader.unitCode == 2 && !dsiBinariesFound && gameSettings.dsiMode != 0) {
+				fadeType = true;
 				consoleDemoInit();
 				iprintf ("The DSi binaries are missing.\n");
 				iprintf ("Please obtain a clean ROM\n");
@@ -788,6 +847,7 @@ int main(int argc, char **argv) {
 					}
 				}
 				if (!donorRomFound) {
+					fadeType = true;
 					consoleDemoInit();
 					iprintf("A donor ROM is required to\n");
 					iprintf("launch this title!\n");
@@ -845,20 +905,20 @@ int main(int argc, char **argv) {
 				const char *argarray[] = {perGameBootstrapFile ? "sd:/_nds/nds-bootstrap-hb-nightly.nds" : "sd:/_nds/nds-bootstrap-hb-release.nds"};
 				int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 				if (!consoleInited) {
+					fadeType = true;
 					consoleDemoInit();
 					consoleInited = true;
 				}
-				consoleDemoInit();
 				iprintf("Start failed. Error %i\n", err);
 				if (err == 1) iprintf ("nds-bootstrap (hb) not found.\n");
 			} else {
 				const char *argarray[] = {isRunFromSd ? (perGameBootstrapFile ? "sd:/_nds/nds-bootstrap-nightly.nds" : "sd:/_nds/nds-bootstrap-release.nds") : (perGameBootstrapFile ? "fat:/_nds/nds-bootstrap-nightly.nds" : "fat:/_nds/nds-bootstrap-release.nds")};
 				int err = runNdsFile(argarray[0], sizeof(argarray) / sizeof(argarray[0]), argarray);
 				if (!consoleInited) {
+					fadeType = true;
 					consoleDemoInit();
 					consoleInited = true;
 				}
-				consoleDemoInit();
 				iprintf("Start failed. Error %i\n", err);
 				if (err == 1) iprintf ("nds-bootstrap not found.\n");
 			}

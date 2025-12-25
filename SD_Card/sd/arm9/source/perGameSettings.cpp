@@ -6,6 +6,7 @@
 #include <nds.h>
 #include <dirent.h>
 
+extern bool fadeType;
 extern int consoleModel;
 
 constexpr std::array<const char *, 3> offOnLabels = {"Default", "Off", "On"};
@@ -96,6 +97,7 @@ bool GameSettings::isDonorRom(const u32 arm7size, const u32 a7mbk6, const u32 SD
 }
 
 void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const bool isHomebrew) {
+	fadeType = true;
 	consoleDemoInit();
 
 	extern sNDSHeaderExt ndsHeader;
