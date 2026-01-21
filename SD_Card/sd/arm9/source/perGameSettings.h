@@ -25,11 +25,13 @@ public:
 	int saveRelocation = -1;
 	int bootstrapFile = -1;
 	int widescreen = -1;
+	int remappedKeys[12] = {0};
 
 	void save(void);
 
 	bool isDonorRom(const u32 arm7size, const u32 a7mbk6, const u32 SDKVersion);
 
+	void remapButtons(void);
 	void menu(FILE* f_nds_file, const std::string &fileName, const bool isHomebrew);
 
 };

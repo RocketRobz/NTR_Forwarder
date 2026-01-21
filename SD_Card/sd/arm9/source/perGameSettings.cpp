@@ -19,6 +19,7 @@ constexpr std::array<const char *, 4> expandLabels = {"Default", "No", "Yes", "Y
 constexpr std::array<const char *, 3> saveRelocationLabels = {"Default", "SD Card", "Game Card"};
 constexpr std::array<const char *, 3> bootstrapLabels = {"Default", "Release", "Nightly"};
 constexpr std::array<const char *, 4> widescreenLabels = {"Default", "Off", "On", "Forced"};
+constexpr std::array<const char *, 12> keyLabels = {"A", "B", "SELECT", "START", "Right", "Left", "Up", "Down", "R", "L", "X", "Y"};
 
 GameSettings::GameSettings(const std::string &fileName, const std::string &filePath) : iniPath("/_nds/ntr-forwarder/gamesettings/" + fileName + ".ini"), romPath(filePath), ini(iniPath) {
 	language = ini.GetInt("GAMESETTINGS", "LANGUAGE", language);
@@ -33,6 +34,19 @@ GameSettings::GameSettings(const std::string &fileName, const std::string &fileP
 	saveRelocation = ini.GetInt("GAMESETTINGS", "SAVE_RELOCATION", saveRelocation);
 	bootstrapFile = ini.GetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
 	widescreen = ini.GetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
+
+	remappedKeys[0] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_A", 0);
+	remappedKeys[1] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_B", 1);
+	remappedKeys[2] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_SELECT", 2);
+	remappedKeys[3] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_START", 3);
+	remappedKeys[4] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_RIGHT", 4);
+	remappedKeys[5] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_LEFT", 5);
+	remappedKeys[6] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_UP", 6);
+	remappedKeys[7] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_DOWN", 7);
+	remappedKeys[8] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_R", 8);
+	remappedKeys[9] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_L", 9);
+	remappedKeys[10] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_X", 10);
+	remappedKeys[11] = ini.GetInt("GAMESETTINGS", "REMAPPED_KEY_Y", 11);
 }
 
 void GameSettings::save() {
@@ -48,6 +62,19 @@ void GameSettings::save() {
 	ini.SetInt("GAMESETTINGS", "SAVE_RELOCATION", saveRelocation);
 	ini.SetInt("GAMESETTINGS", "BOOTSTRAP_FILE", bootstrapFile);
 	ini.SetInt("GAMESETTINGS", "WIDESCREEN", widescreen);
+
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_A", remappedKeys[0]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_B", remappedKeys[1]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_SELECT", remappedKeys[2]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_START", remappedKeys[3]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_RIGHT", remappedKeys[4]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_LEFT", remappedKeys[5]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_UP", remappedKeys[6]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_DOWN", remappedKeys[7]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_R", remappedKeys[8]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_L", remappedKeys[9]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_X", remappedKeys[10]);
+	ini.SetInt("GAMESETTINGS", "REMAPPED_KEY_Y", remappedKeys[11]);
 
 	// Ensure the folder exists
 	if(access("/_nds/ntr-forwarder/gamesettings", F_OK) != 0)
@@ -96,6 +123,48 @@ bool GameSettings::isDonorRom(const u32 arm7size, const u32 a7mbk6, const u32 SD
 	  || arm7size==0x2C5B4)));
 }
 
+void GameSettings::remapButtons(void) {
+	u16 held;
+	int cursorPosition = 0;
+	const int numOptions = 11;
+	while(1) {
+		consoleClear();
+		iprintf("ntr-forwarder\n\n");
+		for (int i = 0; i <= numOptions; i++) {
+			iprintf("  %s -> %s\n", keyLabels[i], keyLabels[remappedKeys[i]]);
+		}
+		iprintf("\n<B> back\n");
+
+		// Print cursor
+		iprintf("\x1b[%d;0H>", 2 + cursorPosition);
+
+		do {
+			scanKeys();
+			held = keysDownRepeat();
+
+			swiWaitForVBlank();
+		} while(!held);
+
+		if(held & KEY_UP) {
+			cursorPosition--;
+			if(cursorPosition < 0)
+				cursorPosition = numOptions;
+		} else if(held & KEY_DOWN) {
+			cursorPosition++;
+			if(cursorPosition > numOptions)
+				cursorPosition = 0;
+		} else if(held & KEY_LEFT) {
+			remappedKeys[cursorPosition]--;
+			if (remappedKeys[cursorPosition] < 0) remappedKeys[cursorPosition] = 11;
+		} else if(held & (KEY_RIGHT | KEY_A)) {
+			remappedKeys[cursorPosition]++;
+			if (remappedKeys[cursorPosition] > 11) remappedKeys[cursorPosition] = 0;
+		} else if(held & KEY_B) {
+			return;
+		}
+	}
+}
+
 void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const bool isHomebrew) {
 	fadeType = true;
 	consoleDemoInit();
@@ -114,9 +183,9 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 
 	u16 held;
 	int cursorPosition = 0;
-	int numOptions = consoleModel == 2 ? 11 : 10;
+	int numOptions = consoleModel == 2 ? 12 : 11;
 	if (!isDSiMode()) {
-		numOptions = 3;
+		numOptions = 4;
 	}
 	const bool showSetDonorRom = isDonorRom(arm7size, ndsHeader.a7mbk6, SDKVersion);
 	if (showSetDonorRom) {
@@ -138,6 +207,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 			iprintf("  Save Relocation: %s\n", saveRelocationLabels[saveRelocation == -1 ? 0 : (saveRelocation == 0 ? 2 : 1)]);
 		}
 		iprintf("  Bootstrap File: %s\n", bootstrapLabels[bootstrapFile + 1]);
+		iprintf("  Remap Buttons\n");
 		if(consoleModel == 2)
 			iprintf("  Widescreen: %s\n", widescreenLabels[widescreen + 1]);
 		if (showSetDonorRom)
@@ -162,7 +232,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 			cursorPosition++;
 			if(cursorPosition > numOptions)
 				cursorPosition = 0;
-		} else if(held & (KEY_LEFT | KEY_A)) {
+		} else if(held & KEY_LEFT) {
 			if (isDSiMode()) {
 				switch(cursorPosition) {
 					case 0:
@@ -209,7 +279,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						bootstrapFile--;
 						if(bootstrapFile < -1) bootstrapFile = 1;
 						break;
-					case 11:
+					case 12:
 						widescreen--;
 						if(widescreen < -1) widescreen = 2;
 						break;
@@ -234,7 +304,7 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						break;
 				}
 			}
-		} else if(held & KEY_RIGHT) {
+		} else if(held & (KEY_RIGHT | KEY_A)) {
 			if (isDSiMode()) {
 				switch(cursorPosition) {
 					case 0:
@@ -282,6 +352,9 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 						if(bootstrapFile > 1) bootstrapFile = -1;
 						break;
 					case 11:
+						if(held & KEY_A) remapButtons();
+						break;
+					case 12:
 						widescreen++;
 						if(widescreen > 2) widescreen = -1;
 						break;
@@ -303,6 +376,9 @@ void GameSettings::menu(FILE* f_nds_file, const std::string &fileName, const boo
 					case 3:
 						bootstrapFile++;
 						if(bootstrapFile > 1) bootstrapFile = -1;
+						break;
+					case 4:
+						if(held & KEY_A) remapButtons();
 						break;
 				}
 			}
