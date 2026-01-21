@@ -904,6 +904,20 @@ int main(int argc, char **argv) {
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "CONSOLE_MODEL", consoleModel);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "LANGUAGE", gameSettings.language == -2 ? language : gameSettings.language);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "REGION", gameSettings.region == -3 ? region : gameSettings.region);
+
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_A", gameSettings.remappedKeys[0]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_B", gameSettings.remappedKeys[1]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_SELECT", gameSettings.remappedKeys[2]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_START", gameSettings.remappedKeys[3]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_RIGHT", gameSettings.remappedKeys[4]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_LEFT", gameSettings.remappedKeys[5]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_UP", gameSettings.remappedKeys[6]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_DOWN", gameSettings.remappedKeys[7]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_R", gameSettings.remappedKeys[8]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_L", gameSettings.remappedKeys[9]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_X", gameSettings.remappedKeys[10]);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_Y", gameSettings.remappedKeys[11]);
+
 			bootstrapini.SaveIniFile( bootstrapIniPath );
 
 			const bool perGameBootstrapFile = (gameSettings.bootstrapFile == -1 ? bootstrapFile : gameSettings.bootstrapFile);
