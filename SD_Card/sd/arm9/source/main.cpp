@@ -490,10 +490,16 @@ int main(int argc, char **argv) {
 		widescreenLoaded = ntrforwarderini.GetInt("NTR-FORWARDER", "WIDESCREEN_LOADED", false);
 
 		if (!widescreenLoaded) {
-			const int runSplash = ntrforwarderini.GetInt("NTR-FORWARDER", "DSI_SPLASH", 1);
+			const int runSplash = ntrforwarderini.GetInt("NTR-FORWARDER", "DSI_SPLASH", 0);
 			if (nitroFSInit(argv[0]) && runSplash) {
 				runGraphicIrq();
 				bootSplashInit(runSplash == 2);
+			} else {
+				// Ensure Y button gets recognized for opening per-game settings menu
+				for (int i = 0; i < 10; i++) {
+					scanKeys();
+					swiWaitForVBlank();
+				}
 			}
 		}
 
