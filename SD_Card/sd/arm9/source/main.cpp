@@ -890,7 +890,7 @@ int main(int argc, char **argv) {
 			bootstrapini.SetString("NDS-BOOTSTRAP", "DONORTWLONLY0_NDS_PATH", "");
 			bootstrapini.SetString("NDS-BOOTSTRAP", "DONORTWLONLY_NDS_PATH", ""); // Clear TWL donor ROM path to work around white screen lockup in nds-bootstrap when running DSi-Enhanced/Exclusive ROMs
 			bootstrapini.SetString("NDS-BOOTSTRAP", "HOMEBREW_ARG", "");
-			bootstrapini.SetString("NDS-BOOTSTRAP", "QUIT_PATH", (isDSiMode() && consoleModel < 2) ? "sd:/hiya.dsi" : "");
+			bootstrapini.SetString("NDS-BOOTSTRAP", "QUIT_PATH", (isDSiMode() && consoleModel < 2 && access("sd:/hiya.dsi", F_OK) == 0) ? "sd:/hiya.dsi" : "");
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_CPU", gameSettings.boostCpu);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "BOOST_VRAM", gameSettings.boostVram == -1 ? false : gameSettings.boostVram);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "CARD_READ_DMA", gameSettings.cardReadDMA);
