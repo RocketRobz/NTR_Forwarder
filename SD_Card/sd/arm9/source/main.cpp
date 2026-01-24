@@ -222,6 +222,7 @@ void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid, 
 			fread(&fileCount, 1, sizeof(fileCount), file);
 
 			u32 offset = 0, size = 0;
+			u32 offsetAlt = 0, sizeAlt = 0;
 
 			// Try binary search for the game
 			int left = 0;
@@ -241,7 +242,12 @@ void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid, 
 						fread(&size, 1, sizeof(size), file);
 						wideCheatFound = true;
 						break;
-					} else if (crc < crc16) {
+					} else if (crc == 0xFFFF) {
+						fread(&offsetAlt, 1, sizeof(offsetAlt), file);
+						fread(&sizeAlt, 1, sizeof(sizeAlt), file);
+					}
+
+					if (crc < crc16) {
 						left = mid + 1;
 					} else {
 						right = mid - 1;
@@ -251,6 +257,13 @@ void SetWidescreen(const char *filename, bool isHomebrew, const char *resetTid, 
 				} else {
 					right = mid - 1;
 				}
+			}
+
+			if (offsetAlt > 0 && offset == 0)
+			{
+				offset = offsetAlt;
+				size = sizeAlt;
+				wideCheatFound = true;
 			}
 
 			if (offset > 0) {
