@@ -448,6 +448,7 @@ std::string savepath;
 std::string dsiWareSrlPath;
 std::string dsiWarePubPath;
 std::string dsiWarePrvPath;
+std::string dsiWareBnrPath;
 
 //---------------------------------------------------------------------------------
 int main(int argc, char **argv) {
@@ -610,10 +611,12 @@ int main(int argc, char **argv) {
 				char savExtension[16] = ".sav";
 				char pubExtension[16] = ".pub";
 				char prvExtension[16] = ".prv";
+				char bnrExtension[16] = ".bnr";
 				if (gameSettings.saveNo > 0) {
 					snprintf(savExtension, sizeof(savExtension), ".sav%d", gameSettings.saveNo);
 					snprintf(pubExtension, sizeof(pubExtension), ".pu%d", gameSettings.saveNo);
 					snprintf(prvExtension, sizeof(prvExtension), ".pr%d", gameSettings.saveNo);
+					snprintf(bnrExtension, sizeof(bnrExtension), ".bn%d", gameSettings.saveNo);
 				}
 				savename = ReplaceAll(filename, typeToReplace, savExtension);
 				romFolderNoSlash = romfolder;
@@ -632,6 +635,7 @@ int main(int argc, char **argv) {
 				dsiWareSrlPath = ndsPath;
 				dsiWarePubPath = ReplaceAll(savepath, savExtension, pubExtension);
 				dsiWarePrvPath = ReplaceAll(savepath, savExtension, prvExtension);
+				dsiWareBnrPath = ReplaceAll(savepath, savExtension, bnrExtension);
 			}
 
 			if (isDSiWare) {
@@ -679,6 +683,29 @@ int main(int argc, char **argv) {
 						}
 					}
 				}
+
+				if ((ndsHeader.dsi_flags & BIT(2)) && getFileSize(dsiWareBnrPath.c_str()) == 0) {
+					fadeType = true;
+					consoleDemoInit();
+					iprintf("Creating banner save file...\n\n");
+
+					FILE *pFile = fopen(dsiWareBnrPath.c_str(), "wb");
+					if (pFile) {
+						const u16 ver = NDS_BANNER_VER_DSi;
+						fwrite(&ver, sizeof(u16), 1, pFile);
+
+						fseek(pFile, 0x4000 - 1, SEEK_SET);
+						fputc('\0', pFile);
+						fclose(pFile);
+					}
+
+					iprintf("Banner save file created!\n");
+
+					for (int i = 0; i < 30; i++) {
+						swiWaitForVBlank();
+					}
+				}
+
 			} else if (isHomebrew == 0) {
 				u32 orgsavesize = getFileSize(savepath.c_str());
 				u32 savesize = 524288; // 512KB (default size for most games)
@@ -812,10 +839,14 @@ int main(int argc, char **argv) {
 			char sfnSrl[62];
 			char sfnPub[62];
 			char sfnPrv[62];
-			if (isRunFromSd && isDSiWare) {
-				fatGetAliasPath("sd:/", dsiWareSrlPath.c_str(), sfnSrl);
-				fatGetAliasPath("sd:/", dsiWarePubPath.c_str(), sfnPub);
-				fatGetAliasPath("sd:/", dsiWarePrvPath.c_str(), sfnPrv);
+			char sfnBnr[62];
+			if (isDSiWare) {
+				if (isRunFromSd) {
+					fatGetAliasPath("sd:/", dsiWareSrlPath.c_str(), sfnSrl);
+					fatGetAliasPath("sd:/", dsiWarePubPath.c_str(), sfnPub);
+					fatGetAliasPath("sd:/", dsiWarePrvPath.c_str(), sfnPrv);
+				}
+				fatGetAliasPath(isRunFromSd ? "sd:/" : "fat:/", dsiWareBnrPath.c_str(), sfnBnr);
 			}
 
 			// Fix weird bug where some settings would get cleared
@@ -899,6 +930,9 @@ int main(int argc, char **argv) {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "PRV_PATH", sfnPrv);
 			} else if (isHomebrew == 0) {
 				bootstrapini.SetString("NDS-BOOTSTRAP", "SAV_PATH", savepath);
+			}
+			if (isHomebrew == 0 && isDSiWare) {
+				bootstrapini.SetString("NDS-BOOTSTRAP", "BNR_PATH", sfnBnr);
 			}
 			bootstrapini.SetString("NDS-BOOTSTRAP", "DONORTWLONLY0_NDS_PATH", "");
 			bootstrapini.SetString("NDS-BOOTSTRAP", "DONORTWLONLY_NDS_PATH", ""); // Clear TWL donor ROM path to work around white screen lockup in nds-bootstrap when running DSi-Enhanced/Exclusive ROMs
