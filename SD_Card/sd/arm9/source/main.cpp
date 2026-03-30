@@ -842,11 +842,11 @@ int main(int argc, char **argv) {
 			char sfnBnr[62];
 			if (isDSiWare) {
 				if (isRunFromSd) {
-					fatGetAliasPath("sd:/", dsiWareSrlPath.c_str(), sfnSrl);
-					fatGetAliasPath("sd:/", dsiWarePubPath.c_str(), sfnPub);
-					fatGetAliasPath("sd:/", dsiWarePrvPath.c_str(), sfnPrv);
+					fatGetAliasPath(dsiWareSrlPath.c_str(), sfnSrl);
+					fatGetAliasPath(dsiWarePubPath.c_str(), sfnPub);
+					fatGetAliasPath(dsiWarePrvPath.c_str(), sfnPrv);
 				}
-				fatGetAliasPath(isRunFromSd ? "sd:/" : "fat:/", dsiWareBnrPath.c_str(), sfnBnr);
+				fatGetAliasPath(dsiWareBnrPath.c_str(), sfnBnr);
 			}
 
 			// Fix weird bug where some settings would get cleared
