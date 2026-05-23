@@ -586,9 +586,6 @@ int main(int argc, char **argv) {
 					FILE *srBackendFile = fopen("sd:/_nds/nds-bootstrap/srBackendId.bin", "wb");
 					fwrite(autoloadParams, sizeof(u32), 2, srBackendFile);
 					fclose(srBackendFile);
-					if (access("sd:/_nds/nds-bootstrap/srFrontendId.bin", F_OK) == 0) {
-						remove("sd:/_nds/nds-bootstrap/srFrontendId.bin"); // No nds-bootstrap frontend is used
-					}
 				} else {
 					FILE *headerFile = fopen("sd:/_nds/ntr-forwarder/header.bin", "rb");
 					if (headerFile) {
@@ -601,10 +598,10 @@ int main(int argc, char **argv) {
 						if (access("sd:/_nds/nds-bootstrap/srBackendId.bin", F_OK) == 0) {
 							remove("sd:/_nds/nds-bootstrap/srBackendId.bin");
 						}
-						if (access("sd:/_nds/nds-bootstrap/srFrontendId.bin", F_OK) == 0) {
-							remove("sd:/_nds/nds-bootstrap/srFrontendId.bin"); // No nds-bootstrap frontend is used
-						}
 					}
+				}
+				if (access("sd:/_nds/nds-bootstrap/srFrontendId.bin", F_OK) == 0) {
+					remove("sd:/_nds/nds-bootstrap/srFrontendId.bin"); // No nds-bootstrap frontend is used
 				}
 			}
 
