@@ -957,6 +957,7 @@ int main(int argc, char **argv) {
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "CONSOLE_MODEL", consoleModel);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "LANGUAGE", gameSettings.language == -2 ? language : gameSettings.language);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "REGION", gameSettings.region == -3 ? region : gameSettings.region);
+			bootstrapini.SetInt("NDS-BOOTSTRAP", "DSIWARE_SLOT1_MODE", 0);
 
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_A", gameSettings.remappedKeys[0]);
 			bootstrapini.SetInt("NDS-BOOTSTRAP", "REMAPPED_KEY_B", gameSettings.remappedKeys[1]);
