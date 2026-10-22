@@ -134,6 +134,8 @@ int checkIfHomebrew(FILE* ndsFile, const bool isRunFromSd) {
 					searchOffset += 4;
 					if (searchOffset >= searchOffsetEnd) break;
 				}
+			} else {
+				res = 2; // Homebrew supports reading from SD without a DLDI driver, so do not use nds-bootstrap
 			}
 
 			return res;
